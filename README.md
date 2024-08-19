@@ -111,7 +111,7 @@ For more details, please refer to the [Apache License 2.0](LICENSE).
 
 ## 🎉 Acknowledgments
 
-- Maintained by the dedicated Business Strategic Application Services Team (SAST) at the [**State Emergency Service**](https://wases.com.au).
+- Maintained by the dedicated Strategic Application Services Team (SAST) at the [**State Emergency Service**](https://wases.com.au).
 - Special thanks to the contributors and dependency managers who help make this project better every day, indirectly supporting and securing our frontline personnel.
 
 Feel free to check out the [documentation](https://github.com/dfes-ses/common-api-utilities/wiki) for more details on each utility.
