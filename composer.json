@@ -1,0 +1,9 @@
+{
+    "require": {
+        "sergeytsalkov/meekrodb": "^3.0",
+        "guzzlehttp/guzzle": "^7.9",
+        "monolog/monolog": "^3.7",
+        "giggsey/libphonenumber-for-php": "^8.13",
+        "robinvdvleuten/ulid": "^5.0"
+    }
+}
