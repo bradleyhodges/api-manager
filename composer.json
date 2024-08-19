@@ -4,6 +4,7 @@
         "guzzlehttp/guzzle": "^7.9",
         "monolog/monolog": "^3.7",
         "giggsey/libphonenumber-for-php": "^8.13",
-        "robinvdvleuten/ulid": "^5.0"
+        "robinvdvleuten/ulid": "^5.0",
+        "vlucas/phpdotenv": "^5.6"
     }
 }
