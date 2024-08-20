@@ -10,6 +10,7 @@
         "symfony/validator": "^7.1",
         "league/flysystem": "3.0",
         "lcobucci/jwt": "^4.0",
-        "symfony/rate-limiter": "^7.1"
+        "symfony/rate-limiter": "^7.1",
+        "symfony/security-csrf": "^7.1"
     }
 }
