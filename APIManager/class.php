@@ -337,8 +337,8 @@
         * @param string $filePath The path to the file to be required. Use "@/path/to/file" to reference 
         *                         the document root, or provide an absolute path.
         * @param bool $force Allow the require operation to proceed even if outside of the document root 
-        *                    (only works if SAFE_REQUIRES is not enabled).
-        * @throws RuntimeException If the file is outside of the document root and SAFE_REQUIRES is enabled, 
+        *                    (only works if ENFORCE_SAFE_REQUIRES is not enabled).
+        * @throws RuntimeException If the file is outside of the document root and ENFORCE_SAFE_REQUIRES is enabled, 
         *                          or if the file does not exist.
         */
        public function requireFile(string $filePath, bool $force = false): void
@@ -352,8 +352,8 @@
         * @param string $filePath The path to the file to be required_once. Use "@/path/to/file" to reference 
         *                         the document root, or provide an absolute path.
         * @param bool $force Allow the require_once operation to proceed even if outside of the document root 
-        *                    (only works if SAFE_REQUIRES is not enabled).
-        * @throws RuntimeException If the file is outside of the document root and SAFE_REQUIRES is enabled, 
+        *                    (only works if ENFORCE_SAFE_REQUIRES is not enabled).
+        * @throws RuntimeException If the file is outside of the document root and ENFORCE_SAFE_REQUIRES is enabled, 
         *                          or if the file does not exist.
         */
        public function requireOnceFile(string $filePath, bool $force = false): void
@@ -365,9 +365,9 @@
         * Handles the require and require_once logic with security checks.
         * 
         * This method resolves the file path based on the document root and enforces security checks 
-        * if the SAFE_REQUIRES environment variable is set. If the file is outside the document root 
-        * and SAFE_REQUIRES is enabled, the operation is denied unless the --force flag is provided 
-        * and SAFE_REQUIRES is not enabled.
+        * if the ENFORCE_SAFE_REQUIRES environment variable is set. If the file is outside the document root 
+        * and ENFORCE_SAFE_REQUIRES is enabled, the operation is denied unless the --force flag is provided 
+        * and ENFORCE_SAFE_REQUIRES is not enabled.
         * 
         * @param string $filePath The path to the file.
         * @param bool $force Whether to force the operation if outside of the document root.
@@ -377,7 +377,7 @@
        private function handleRequire(string $filePath, bool $force, bool $requireOnce): void
        {
            $documentRoot = getenv('DOCUMENT_ROOT_PATH') ?: '/var/www/';
-           $safeRequires = getenv('SAFE_REQUIRES') === 'true';
+           $safeRequires = getenv('ENFORCE_SAFE_REQUIRES') === 'true';
    
            // Normalize document root to always have a trailing slash
            $documentRoot = rtrim(realpath($documentRoot), '/') . '/';
@@ -388,9 +388,9 @@
            // Security check: ensure the file is within the document root
            if ($filePath === false || strpos($filePath, $documentRoot) !== 0) {
                if ($safeRequires) {
-                   // Log the attempt and deny the operation if SAFE_REQUIRES is enabled
-                   $this->logger->warning(sprintf('Attempted to require file outside of document root: %s. Operation denied due to SAFE_REQUIRES.', $filePath));
-                   throw new RuntimeException("Requiring files outside of the document root is not allowed with SAFE_REQUIRES enabled.");
+                   // Log the attempt and deny the operation if ENFORCE_SAFE_REQUIRES is enabled
+                   $this->logger->warning(sprintf('Attempted to require file outside of document root: %s. Operation denied due to ENFORCE_SAFE_REQUIRES.', $filePath));
+                   throw new RuntimeException("Requiring files outside of the document root is not allowed with ENFORCE_SAFE_REQUIRES enabled.");
                }
    
                if (!$force) {

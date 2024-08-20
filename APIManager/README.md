@@ -202,7 +202,7 @@ $responseManager->respondToClient(true, ['feature_status' => 'disabled']);
 - **`DOCUMENT_ROOT_PATH`**: The document root directory (default: `/var/www/`).
 - **`COMPOSER_AUTOLOAD_PATH`**: The environment variable that defines the path to the Composer autoload file (default: `/var/www/vendor/autoload.php`).
 - **`LOGS_PATH`**: Directory for storing logs (default: `/var/log/`).
-- **`SAFE_REQUIRES`**: If `true`, file inclusion outside of the document root is forbidden.
+- **`ENFORCE_SAFE_REQUIRES`**: If `true`, file inclusion outside of the document root is forbidden.
 
 ## ✨ Conclusion
 
