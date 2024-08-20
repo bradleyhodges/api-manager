@@ -13,11 +13,12 @@
      *
      * @example
      * $responseManager = new ApiResponseManager($corsHandler, $errorErrorLogger);
-     * $responseManager->addGlobalMessage("Operation successful.");
-     * $responseManager->respondToClient(true, ["type" => "success"]);
+     * $responseManager->addMessage("Operation successful.");
+     * $responseManager->respond(true, ["type" => "success"]);
      */
     class ApiResponseManager
     {
+        public $cors;
         /**
          * Array to store global messages.
          * @var array<string>
@@ -30,44 +31,91 @@
          */
         private array $globalErrors = [];
 
+        /**
+         * The CORS handler instance.
+         * @var CORS
+         */
         private ErrorLogger $errorLogger;
 
-        private CORS $cors;
+        /**
+         * The API manager instance.
+         */
+        private APIManager $apiManager;
 
         /**
-         * Constructor to initialize the logger and CORS handler.
-         *
-         * @param CORS $cors The CORS handler instance.
-         * @param ErrorLogger $errorLogger The logger instance.
+         * ApiResponseManager constructor.
+         * Initializes the response manager with an error logger and API manager instance.
+         * 
+         * @param ErrorLogger $errorLogger The logger instance to use for error logging.
+         * @param APIManager $apiManager The API manager instance to use for API operations.
          */
-        public function __construct(CORS $cors, ErrorLogger $errorLogger)
+        public function __construct(ErrorLogger $errorLogger, APIManager $apiManager)
         {
-            $this->cors = $cors;
             $this->errorLogger = $errorLogger;
+            $this->apiManager = $apiManager;
+        }
+
+        /**
+         * Sets the CORS handler instance to use for handling CORS requests.
+         *
+         * @param CORS $cors The CORS handler instance to use.
+         */
+        public function setCORSHandler(CORS $cors): void
+        {
         }
 
         /**
          * Adds a message to the global messages array.
          *
-         * @param string $message The message to add.
+         * @param string|array $message The message to add. It can be either a string or an array.
+         * 
+         * @example $responseManager->addMessage("Operation successful.");
          */
-        public function addGlobalMessage(string $message): void
+        public function addMessage(string|array $message): void
         {
-            // Sanitize input before storing
-            $sanitizedMessage = Sanitize::sanitizeString($message);
-            $this->globalMessages[] = $sanitizedMessage;
+            // Check if the message is an array
+            if (is_array($message)) {
+                // Sanitize each element in the array using the API manager
+                $sanitizedMessages = array_map([$this->apiManager, 'sanitizeInput'], $message);
+
+                // Merge the sanitized messages with the global messages array
+                $this->globalMessages = array_merge($this->globalMessages, $sanitizedMessages);
+            } else {
+                // Sanitize a single string message
+                $sanitizedMessage = $this->apiManager->sanitizeInput($message);
+
+                // Add the sanitized message to the global messages array
+                $this->globalMessages[] = $sanitizedMessage;
+            }
         }
 
         /**
          * Adds an error to the global errors array.
          *
-         * @param string $error The error to add.
+         * @param array $error The error to add, consistent with JSON:API specification.
+         * 
+         * @example $responseManager->addError(['status' => '400', 'title' => 'Bad Request', 'detail' => 'Invalid input.']);
+         * @example $responseManager->addError(['status' => '500', 'title' => 'Internal Server Error', 'detail' => 'An unexpected error occurred.']);
          */
-        public function addGlobalError(string $error): void
+        public function addError(array $error): void
         {
-            // Sanitize input before storing
-            $sanitizedError = Sanitize::sanitizeString($error);
-            $this->globalErrors[] = $sanitizedError;
+            // Sanitize required fields in the error object
+            $sanitizedError = [
+                'status' => isset($error['status']) ? $this->apiManager->sanitizeInput($error['status']) : null,
+                'code' => isset($error['code']) ? $this->apiManager->sanitizeInput($error['code']) : null,
+                'title' => isset($error['title']) ? $this->apiManager->sanitizeInput($error['title']) : null,
+                'detail' => isset($error['detail']) ? $this->apiManager->sanitizeInput($error['detail']) : null,
+                'source' => $error['source'] ?? null,
+                'meta' => $error['meta'] ?? null,
+            ];
+
+            // Sanitize any links if present
+            if (isset($error['links']) && is_array($error['links'])) {
+                $sanitizedError['links'] = array_map([Sanitize::class, 'sanitizeString'], $error['links']);
+            }
+
+            // Add the sanitized error to the global errors array
+            $this->globalErrors[] = array_filter($sanitizedError, fn($value): bool => !is_null($value));
         }
 
         /**
@@ -93,20 +141,45 @@
         }
 
         /**
+         * Responds to the client with an empty response (no content).
+         *
+         * @param int $statusCode The HTTP status code for the response. Defaults to 204 (No Content).
+         * 
+         * @example $responseManager->sendEmptyResponse(204);
+         */
+        public function sendEmptyResponse(int $statusCode = 204): never
+        {
+            // Set the content type
+            header('Content-Type: application/vnd.api+json');
+
+            // Set the response code
+            http_response_code($statusCode);
+
+            // Set security-related headers
+            $this->setSecurityHeaders();
+
+            // Log the response
+            $this->errorLogger->logInfo('API Response');
+
+            // Exit
+            exit();
+        }
+
+        /**
          * Responds to the client with a JSON-encoded response following JSON:API spec.
          *
          * @param bool $success Indicates whether the response represents a successful outcome.
          * @param array<string, mixed> $data The data to include in the response, compliant with JSON:API.
-         * @param array<string>|null $messages An array of messages to include in the response.
-         * @param array<string>|null $errors An array of errors to include in the response.
          * @param int|null $statusCode The HTTP status code for the response.
+         * @param array<string>|null $messages An optional array of messages to include in the response.
+         * @param array<string>|null $errors An optional array of errors to include in the response.
          */
-        public function respondToClient(
+        public function respond(
             bool $success = true,
             array $data = [],
+            ?int $statusCode = null,
             ?array $messages = null,
-            ?array $errors = null,
-            ?int $statusCode = null
+            ?array $errors = null
         ): never {
             // Validate and sanitize data
             $validatedData = $this->validateAndSanitizeData($data);
@@ -129,8 +202,8 @@
                 'errors' => $allErrors,
             ];
 
-            // Log the response
-            $this->errorLogger->logInfo('API Response');
+            // // Log the response
+            // $this->errorLogger->logInfo('A client was responded to:' . json_encode($response, JSON_THROW_ON_ERROR));
 
             // Set security-related headers
             $this->setSecurityHeaders();
@@ -173,11 +246,11 @@
             // Check if both arrays are empty
             if ($this->globalMessages === [] && $this->globalErrors === []) {
                 // If none are present, provide a default message
-                $this->addGlobalMessage("The API Controller received an instruction to bail out but was not provided a reason.");
+                $this->addMessage("The API Controller received an instruction to bail out but was not provided a reason.");
             }
 
             // Respond to the client with failure, using the global messages and errors
-            $this->respondToClient(
+            $this->respond(
                 false, // failure
                 [],    // no data
                 $this->globalMessages, // messages
@@ -199,7 +272,7 @@
             foreach ($data as $key => $value) {
                 // Example validation and sanitization logic, can be extended
                 if (is_string($value)) {
-                    $sanitizedData[$key] = Sanitize::sanitizeString($value);
+                    $sanitizedData[$key] = $this->apiManager->sanitizeInput($value);
                 } elseif (is_array($value)) {
                     $sanitizedData[$key] = $this->validateAndSanitizeData($value); // Recursively sanitize arrays
                 } else {
@@ -259,6 +332,6 @@
     // $corsHandler = new CORSHandler();
     // $responseManager = new ApiResponseManager($corsHandler);
     // $responseManager->handleCORS(['https://example.com'], true);
-    // $responseManager->addGlobalMessage("This is a test message.");
-    // $responseManager->respondToClient(true, ["type" => "test"]);
+    // $responseManager->addMessage("This is a test message.");
+    // $responseManager->respond(true, ["type" => "test"]);
 ?>

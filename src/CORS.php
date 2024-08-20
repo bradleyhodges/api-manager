@@ -1,8 +1,8 @@
 <?php
     namespace APIManager;
 
-    use APIManager\responseManager;
-    use APIManager\errorLog;
+    use APIManager\ApiResponseManager;
+    use APIManager\ErrorLogger;
     use Throwable;
     
     /**
@@ -11,21 +11,35 @@
      */
     class CORS
     {
-        private ?errorLog $errorLog;
+        /**
+         * @var ErrorLogger $errorLog Logger instance for error logging.
+         */
+        private ErrorLogger $errorLogger;  // Correct the type to ErrorLogger
         
-        private responseManager $responseManager;    
+        /**
+         * @var ApiResponseManager $responseManager Response manager instance for sending HTTP responses.
+         */
+        private ?ApiResponseManager $apiResponseManager = null;
 
         /**
          * CORS constructor.
-         * Initializes the class with a logger and a response manager.
+         * Initializes the CORS handler with an error logger instance.
          *
-         * @param responseManager $responseManager An instance of the response manager.
-         * @param errorLog $errorLog The logger instance.
+         * @param ErrorLogger $errorLogger The logger instance to use for error logging.
          */
-        public function __construct(responseManager $responseManager, ?errorLog $errorLog)
+        public function __construct(ErrorLogger $errorLogger)
         {
-            $this->responseManager = $responseManager;
-            $this->errorLog = $errorLog;
+            $this->errorLogger = $errorLogger;
+        }
+
+        /**
+         * Sets the response manager instance to use for sending HTTP responses.
+         *
+         * @param ApiResponseManager $responseManager The response manager instance to use.
+         */
+        public function setResponseManager(ApiResponseManager $apiResponseManager): void
+        {
+            $this->apiResponseManager = $apiResponseManager;
         }
 
         /**
@@ -51,14 +65,17 @@
             int $maxAge = 86400
         ): void {
             try {
-                $this->checkHeaders();
+                // Check if headers have already been sent and if the required headers are present
+                if (!$this->checkHeaders()) {
+                    return;
+                }
     
                 // Sanitize and validate the Origin header
                 $origin = filter_var($_SERVER['HTTP_ORIGIN'], FILTER_VALIDATE_URL);
                 if ($origin === false) {
                     $this->logError("Invalid origin format: " . $_SERVER['HTTP_ORIGIN']);
-                    $this->responseManager->respondWithError(400, "Bad Request: Invalid origin format.");
-                    return;
+                    $this->apiResponseManager->addError(['status' => '400', 'title' => 'Bad Request', 'detail' => 'The origin header is invalid']);
+                    $this->apiResponseManager->respond(false, [], 400);
                 }
     
                 // Check if the origin is in the allowed list
@@ -75,28 +92,42 @@
                     $this->handlePreflightRequest($allowedMethods, $allowedHeaders, $maxAge);
                 } else {
                     $this->logError("Disallowed CORS origin: " . $origin);
-                    $this->responseManager->respondWithError(403, "Forbidden: Origin not allowed.");
+                    $this->apiResponseManager->addError(['status' => '403', 'title' => 'Forbidden', 'detail' => 'The origin is not allowed to make this request']);
+                    $this->apiResponseManager->respond(false, [], 403);
                     return;
                 }
             } catch (Throwable $throwable) {
                 $this->logCritical($throwable);
-                $this->responseManager->respondWithError(500, "Internal server error occurred.");
+                $this->apiResponseManager->addError(['status' => '500', 'title' => 'Internal server error occurred', 'detail' => 'An internal server error occurred']);
+                $this->apiResponseManager->respond(false, [], 500);
             }
         }
 
-        
-    private function checkHeaders(): void
+        /**
+         * Checks if headers have already been sent and if the required headers are present.
+         *
+         * @return bool True if the headers are present and not sent; false otherwise.
+         * @throws RuntimeException If headers have already been sent.
+         */
+        private function checkHeaders(): bool
         {
+            // Check if headers have already been sent
             if (headers_sent()) {
+                // Log an error and throw an exception if headers have already been sent
                 $this->logError("Headers already sent, cannot set CORS headers.");
+
+                // Throw a runtime exception to indicate that headers have already been sent
                 throw new RuntimeException("Headers already sent, cannot set CORS headers.");
             }
 
+            // Check if the required headers are present
             if (!isset($_SERVER['HTTP_ORIGIN']) || !isset($_SERVER['REQUEST_METHOD'])) {
-                $this->logError("Missing HTTP_ORIGIN or REQUEST_METHOD in the request.");
-                $this->responseManager->respondWithError(400, "Bad Request: Missing required headers.");
-                exit;
+                // Log an error and add a global message if the required headers are missing
+                $this->apiResponseManager->addMessage('CORS headers were not set as the HTTP_ORIGIN and/or HTTP_REQUEST_METHOD headers were not present with the request');
+                return false;
             }
+            // Return true if the required headers are present
+            return true;
         }
 
         private function handlePreflightRequest(array $allowedMethods, array $allowedHeaders, int $maxAge): void
@@ -105,7 +136,7 @@
                 header('Access-Control-Allow-Methods: ' . implode(', ', $allowedMethods));
                 header('Access-Control-Allow-Headers: ' . implode(', ', $allowedHeaders));
                 header('Access-Control-Max-Age: ' . $maxAge);
-                $this->responseManager->respondWithNoContent();
+                $this->apiResponseManager->sendEmptyResponse(200);
                 exit;
             }
         }
@@ -117,8 +148,8 @@
          */
         private function logError(string $message): void
         {
-            if ($this->errorLog instanceof errorLog) {
-                $this->errorLog->logError($message);
+            if ($this->errorLogger instanceof errorLog) {
+                $this->errorLogger->logError($message);
             } else {
                 error_log($message);
             }
@@ -131,8 +162,8 @@
          */
         private function logCritical(Throwable $throwable): void
         {
-            if ($this->errorLog instanceof errorLog) {
-                $this->errorLog->logCritical($throwable);
+            if ($this->errorLogger instanceof errorLog) {
+                $this->errorLogger->logCritical($throwable);
             } else {
                 error_log($throwable->getMessage() . ' in ' . $throwable->getFile() . ' on line ' . $throwable->getLine());
             }

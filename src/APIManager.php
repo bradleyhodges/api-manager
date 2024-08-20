@@ -14,16 +14,22 @@ declare(strict_types=1);
     
     namespace APIManager;
 
+    use Exception;
     use ErrorException;
     use APIManager\CORS;
-    use APIManager\responseManager;
-    use APIManager\errorLog;
+    use APIManager\ApiResponseManager;
+    use APIManager\ErrorLogger;
     use Symfony\Component\RateLimiter\RateLimiterFactory;
+    use Symfony\Component\RateLimiter\Policy\SlidingWindowLimiter;
+    use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
+    use Symfony\Component\RateLimiter\RateLimit;
+    use DateInterval;
     use Symfony\Component\Security\Csrf\CsrfTokenManager;
     use Dotenv\Dotenv;
     use Throwable;
     use RuntimeException;
     use InvalidArgumentException;
+    use Monolog\Logger;
 
     /**
      * Class APIManager
@@ -38,9 +44,9 @@ declare(strict_types=1);
     class APIManager
     {
         /**
-         * @var errorLog $logger Logger instance for error logging.
+         * @var ErrorLogger $errorLog Logger instance for error logging.
          */
-        private errorLog $errorLog;
+        private ErrorLogger $errorLogger;  // Correct the type to ErrorLogger
 
         /**
          * @var ApiResponseManager $responseManager Instance of the response manager for handling API responses.
@@ -56,6 +62,16 @@ declare(strict_types=1);
          * @var CsrfTokenManager|null $csrfTokenManager Instance of the CSRF token manager, if initialized.
          */
         private ?CsrfTokenManager $csrfTokenManager = null;
+
+        /**
+         * @var RateLimiterFactory|null $rateLimiterFactory Instance of the rate limiter factory, if initialized.
+         */
+        private ?RateLimiterFactory $rateLimiterFactory = null;
+        
+        /**
+         * @var InMemoryStorage $storage In-memory storage for rate limiting (replace with a persistent storage in production).
+         */
+        private $inMemoryStorage;
 
         /**
          * @var array $securityHeaders Default security headers to be applied to responses.
@@ -83,21 +99,26 @@ declare(strict_types=1);
             $this->loadEnvironmentVariables();
             
             // Get log file path from options or environment
-            $logFilePath = getenv('LOGS_PATH') . '/error.log';
+            $logFilePath = getenv('LOGS_PATH') . '/var/log/caddy/phpApiManager.log';
 
             // Initialize ErrorLogger with the provided log file path
-            $this->errorLog = new ErrorLogger($logFilePath);
+            $this->errorLogger = new ErrorLogger($logFilePath);
 
-            // Initialize core components
-            $this->apiResponseManager = new ApiResponseManager($corsHandler ?? null, $logger);
-            $this->cors = new CORS($this->apiResponseManager, $this->errorLog);
+            // Create the in-memory storage for rate limiting
+            $this->inMemoryStorage = new InMemoryStorage();
 
+            // Initialize the core components without dependencies
+            $this->cors = new CORS($this->errorLogger);
+            $this->apiResponseManager = new ApiResponseManager($this->errorLogger, $this);
+
+            // Set the circular dependencies
+            $this->cors->setResponseManager($this->apiResponseManager);
+            $this->apiResponseManager->setCORSHandler($this->cors);
 
             // Set error and exception handlers
             set_error_handler([$this, 'handleError']);
             set_exception_handler([$this, 'handleException']);
 
-            
             // Register shutdown function to handle fatal errors
             register_shutdown_function([$this, 'handleShutdown']);
         }
@@ -193,7 +214,7 @@ declare(strict_types=1);
             // Check if the error is a fatal error
             if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
                 // Log the fatal error
-                $this->errorLog->critical(sprintf(
+                $this->errorLogger->logCritical(sprintf(
                     'Fatal error: %s in %s on line %d',
                     $error['message'],
                     $error['file'],
@@ -201,7 +222,8 @@ declare(strict_types=1);
                 ));
                 
                 // Use the response manager to send a 500 response with a JSON error message
-                $this->apiResponseManager->respondWithError(500, 'Internal server error.');
+                $this->apiResponseManager->addError(['status' => '500', 'title' => 'Internal Server Error', 'detail' => 'An unexpected error occurred']);
+                $this->apiResponseManager->respond(false, [], 500);
             }
         }
 
@@ -262,8 +284,111 @@ declare(strict_types=1);
          */
         public function useRateLimiter(array $config = []): self
         {
+            // Ensure required configuration keys are present
+            $config = array_merge([
+                'id' => 'default',
+                'policy' => 'sliding_window',
+                'limit' => 100,
+                'interval' => '1 minute',
+            ], $config);
+
+            // Convert the interval to a valid DateInterval format
+            $this->convertToDateInterval($config['interval']);
+
+            // Create a RateLimiterFactory with the given configuration
+            $limiterConfig = [
+                'id' => $config['id'],
+                'policy' => $config['policy'],
+                'limit' => $config['limit'],
+                'interval' => $config['interval'],
+            ];
+
+            // Create the rate limiter factory
+            $this->rateLimiterFactory = new RateLimiterFactory($limiterConfig, $this->inMemoryStorage);
+
             // Apply rate limiting to the current request
+            $limiter = $this->rateLimiterFactory->create($config['id']);
+            $rateLimit = $limiter->consume();
+
+            if (!$rateLimit->isAccepted()) {
+                // Too many requests, handle the rate limiting error (e.g., throw an exception or return an error response)
+                $this->apiResponseManager->addError(['status' => '429', 'title' => 'Too Many Requests', 'detail' => 'Rate limit exceeded']);
+                $this->apiResponseManager->respond(false, [], 429);
+            }
+
             return $this;
+        }
+
+        /**
+         * Checks the current rate limit status without consuming a token.
+         *
+         * @param string $id The rate limiter ID.
+         * @return RateLimit The current rate limit status.
+         */
+        public function checkRateLimit(string $id): RateLimit
+        {
+            if (!$this->rateLimiterFactory instanceof RateLimiterFactory) {
+                throw new RuntimeException('RateLimiter has not been initialized.');
+            }
+    
+            $limiter = $this->rateLimiterFactory->create($id);
+            return $limiter->consume(0); // Check without consuming
+        }
+    
+        /**
+         * Resets the rate limiter for a specific ID.
+         *
+         * @param string $id The rate limiter ID.
+         */
+        public function resetRateLimit(string $id): self
+        {
+            if (!$this->rateLimiterFactory instanceof RateLimiterFactory) {
+                throw new RuntimeException('RateLimiter has not been initialized.');
+            }
+    
+            $limiter = $this->rateLimiterFactory->create($id);
+            $limiter->reset(); // Reset the rate limit for the given ID
+    
+            return $this;
+        }
+    
+        /**
+         * Gets the number of remaining attempts before the rate limit is reached.
+         *
+         * @param string $id The rate limiter ID.
+         * @return int The number of remaining attempts.
+         */
+        public function getRateLimitRemainingAttempts(string $id): int
+        {
+            $rateLimit = $this->checkRateLimit($id);
+            return $rateLimit->getRemainingTokens();
+        }
+    
+        /**
+         * Sets the storage backend for the rate limiter.
+         *
+         * @param object $storage The storage backend (e.g., RedisStorage, InMemoryStorage).
+         */
+        public function setRateLimitStorage(object $storage): self
+        {
+            $this->inMemoryStorage = $storage;
+            return $this;
+        }
+    
+        /**
+         * Gets the current rate limit status.
+         *
+         * @param string $id The rate limiter ID.
+         * @return array The rate limit status (remaining attempts, reset time, etc.).
+         */
+        public function getRateLimitStatus(string $id): array
+        {
+            $rateLimit = $this->checkRateLimit($id);
+    
+            return [
+                'remaining_attempts' => $rateLimit->getRemainingTokens(),
+                'reset_time' => $rateLimit->getRetryAfter()->getTimestamp(),
+            ];
         }
 
         /**
@@ -278,9 +403,10 @@ declare(strict_types=1);
         /**
          * Adds a header to the response.
          *
-         * @return $this
+         * @param string $headerName The name of the header to add.
+         * @param string $headerValue The value of the header to add.
          */
-        public function addHeader(string $headerName, string $headerValue): self
+        public function addHeader(string $headerName, string $headerValue): void
         {
             // Prevent header injection attacks
             if (!headers_sent()) {
@@ -292,34 +418,62 @@ declare(strict_types=1);
         /**
          * Removes a header from the response.
          *
-         * @return $this
+         * @param string $headerName The name of the header to remove.
          */
-        public function removeHeader(string $headerName): self
+        public function removeHeader(string $headerName): void
         {
             header_remove($headerName);
-            return $this;
         }
 
         /**
-         * Adds a log message.
+         * Sets the response Content-Type header.
          *
-         * @param array $logData Log data including message, level, and type.
+         * @param string $contentType The content type to set (e.g., 'text/html', 'application/json').
+         */
+        public static function setResponseContentType(string $contentType): void
+        {
+            // Only set the header if it hasn't already been sent
+            if (!headers_sent()) {
+                header('Content-Type: ' . $contentType);
+            }
+        }
+
+        /**
+         * Adds a log message, similar to PHP's error_log function.
+         *
+         * @param string|array|Throwable $logData Log data, either as a string message, an array with level and message, or an exception.
+         * @param string $level (optional) The log level (e.g., 'error', 'warning', 'critical'). Default is 'error'.
          * @return $this
          */
-        public function errorLog(array $logData): self
+        public function errorLog(string|array|Throwable $logData, string $level = 'error'): self
         {
-            $message = $logData['message'] ?? '';
-            $level = $logData['level'] ?? 'error';
+            // If $logData is a string, treat it as the message
+            if (is_string($logData)) {
+                $message = $logData;
+            } 
+            // If $logData is an array, extract the message and level
+            elseif (is_array($logData)) {
+                $message = $logData['message'] ?? '';
+                $level = $logData['level'] ?? $level;
+            }
+            // If $logData is an exception, log it as critical
+            elseif ($logData instanceof Throwable) {
+                $message = $logData;
+                $level = 'critical';
+            } else {
+                $message = '';
+            }
 
+            // Log the message based on the level
             switch ($level) {
                 case 'critical':
-                    $this->errorLog->logCritical($message);
+                    $this->errorLogger->logCritical($message);
                     break;
                 case 'warning':
-                    $this->errorLog->logWarning($message);
+                    $this->errorLogger->logWarning($message);
                     break;
                 default:
-                    $this->errorLog->logError($message);
+                    $this->errorLogger->logError($message);
                     break;
             }
 
@@ -342,18 +496,27 @@ declare(strict_types=1);
          */
         public function handleError(int $errno, string $errstr, string $errfile, int $errline): void
         {
-            // Log the error based on the error level
-            $logLevel = Logger::ERROR;
-
-            // Set log level based on error type
+            // Determine the log level based on the error type
+            $logLevel = Logger::ERROR;  // Use Monolog's Logger constants
+        
             if (in_array($errno, [E_WARNING, E_USER_WARNING])) {
                 $logLevel = Logger::WARNING;
             } elseif (in_array($errno, [E_NOTICE, E_USER_NOTICE, E_DEPRECATED, E_USER_DEPRECATED])) {
                 $logLevel = Logger::NOTICE;
             }
-
-            // Log the error message
-            $this->errorLog->logError($logLevel, sprintf('Error: %s in %s on line %d', $errstr, $errfile, $errline));
+        
+            // Prepare the context with file and line information
+            $context = [
+                'file' => $errfile,
+                'line' => $errline,
+                'errno' => $errno,
+            ];
+        
+            // Log the error with the message and context
+            $this->errorLogger->logError(
+                $errstr,  // The error message
+                $context  // Additional context including file, line, and errno
+            );
             
             // Throw an exception for errors with log level of ERROR
             if ($errno === E_ERROR) {
@@ -381,10 +544,11 @@ declare(strict_types=1);
             ];
 
             // Log the exception message and context
-            $this->errorLog->logCritical($throwable->getMessage(), $context);
+            $this->errorLogger->logCritical($throwable, $context);
 
             // Use the response manager to send a 500 response with a JSON error message
-            $this->apiResponseManager->respondWithError(500, 'Internal server error.');
+            $this->apiResponseManager->addError(['status' => '500', 'title' => 'Internal Server Error', 'detail' => 'An unexpected error occurred']);
+            $this->apiResponseManager->respond(false, [], 500);
         }
         
         /**
@@ -394,7 +558,7 @@ declare(strict_types=1);
          * This method ensures that input data is safe for processing by trimming whitespace, 
          * removing invalid UTF-8 characters, and truncating the string if necessary.
          *
-         * @param string|null $data The data to sanitize and process. Can be null.
+         * @param mixed $data The data to sanitize and process. 
          * @param int|null $maxLength Optional maximum length for truncation. Must be a positive integer if provided.
          * 
          * @return string|null Returns the sanitized and processed string, or null if the string is empty after sanitization.
@@ -412,8 +576,21 @@ declare(strict_types=1);
          *     // Handle empty input
          * }
          */
-        public function sanitizeInput(string $input, ?int $maxLength = null): string
+        public function sanitizeInput(mixed $input, ?int $maxLength = null): string
         {
+            // Check if the input is already a string
+            if (is_string($input)) {
+                return htmlspecialchars($input, ENT_QUOTES, 'UTF-8');
+            }
+    
+            // Try to convert to string
+            try {
+                $convertedString = strval($input);
+            } catch (Exception $exception) {
+                // If conversion fails, return an empty string
+                return '';
+            }
+
             // Validate maxLength if provided
             if ($maxLength !== null && (!is_int($maxLength) || $maxLength <= 0)) {
                 throw new InvalidArgumentException('maxLength must be a positive integer if provided.');
@@ -519,18 +696,18 @@ declare(strict_types=1);
            if ($filePath === false || strpos($filePath, $documentRoot) !== 0) {
                if ($safeRequires) {
                    // Log the attempt and deny the operation if ENFORCE_SAFE_REQUIRES is enabled
-                   $this->errorLog->warning(sprintf('Attempted to require file outside of document root: %s. Operation denied due to ENFORCE_SAFE_REQUIRES.', $filePath));
+                   $this->errorLogger->warning(sprintf('Attempted to require file outside of document root: %s. Operation denied due to ENFORCE_SAFE_REQUIRES.', $filePath));
                    throw new RuntimeException("Requiring files outside of the document root is not allowed with ENFORCE_SAFE_REQUIRES enabled.");
                }
    
                if (!$force) {
                    // Log the attempt and deny the operation if the force flag is not set
-                   $this->errorLog->warning(sprintf('Attempted to require file outside of document root without --force: %s. Operation denied.', $filePath));
+                   $this->errorLogger->warning(sprintf('Attempted to require file outside of document root without --force: %s. Operation denied.', $filePath));
                    throw new RuntimeException("Requiring files outside of the document root requires the --force flag.");
                }
    
                // Log that the force flag is being used
-               $this->errorLog->info('Requiring file outside of document root with --force: ' . $filePath);
+               $this->errorLogger->info('Requiring file outside of document root with --force: ' . $filePath);
            }
    
            // Check if the file exists
@@ -559,6 +736,39 @@ declare(strict_types=1);
         }
 
         /**
+         * Converts a human-readable interval (e.g., "1 minute") to a DateInterval.
+         *
+         * @param string $interval The interval in a human-readable format.
+         * @return DateInterval The interval as a DateInterval object.
+         * @throws Exception If the interval format is unsupported.
+         */
+        private function convertToDateInterval(string $interval): DateInterval
+        {
+            // Define supported conversions
+            $conversions = [
+                'minute' => 'PT1M',
+                'hour' => 'PT1H',
+                'day' => 'P1D',
+                'week' => 'P1W',
+                'month' => 'P1M',
+                'year' => 'P1Y',
+            ];
+
+            // Extract the number and unit from the interval
+            if (preg_match('/^(\d+)\s*(minute|hour|day|week|month|year)s?$/i', $interval, $matches)) {
+                $quantity = (int)$matches[1];
+                $unit = strtolower($matches[2]);
+
+                // Convert to the corresponding ISO 8601 format
+                if (isset($conversions[$unit])) {
+                    return new DateInterval(str_replace('1', (string)$quantity, $conversions[$unit]));
+                }
+            }
+
+            throw new Exception('Unsupported interval format: ' . $interval);
+        }
+
+        /**
          * Decodes a JSON string into a PHP array with error handling.
          * 
          * This method decodes JSON and throws an exception if the JSON is invalid.
@@ -567,13 +777,17 @@ declare(strict_types=1);
          * @return array The decoded JSON as a PHP array.
          * @throws RuntimeException If the JSON string is invalid.
          */
-        public function decodeJson(string $json): array
+        public function decodeJSON(string $json): array
         {
+            // Decode the JSON string
             $data = json_decode($json, true);
+
+            // Check if the JSON is valid
             if (json_last_error() !== JSON_ERROR_NONE) {
                 throw new RuntimeException("Invalid JSON: " . json_last_error_msg());
             }
             
+            // Return the decoded data
             return $data;
         }
 
@@ -602,7 +816,7 @@ declare(strict_types=1);
          * @param string $key The key to retrieve from the $_GET array.
          * @return string|null The sanitized input or null if the key does not exist.
          */
-        public function getSanitizedGet(string $key): ?string
+        public function getSanitizedGET(string $key): ?string
         {
             return isset($_GET[$key]) ? $this->sanitizeInput($_GET[$key]) : null;
         }
@@ -613,7 +827,7 @@ declare(strict_types=1);
          * @param string $key The key to retrieve from the $_POST array.
          * @return string|null The sanitized input or null if the key does not exist.
          */
-        public function getSanitizedPost(string $key): ?string
+        public function getSanitizedPOST(string $key): ?string
         {
             return isset($_POST[$key]) ? $this->sanitizeInput($_POST[$key]) : null;
         }
@@ -621,97 +835,26 @@ declare(strict_types=1);
         /**
          * Retrieves JSON payload from the request body and decodes it into a PHP array.
          * 
+         * @param bool $requirePayload Whether to require a non-empty JSON payload.
+         * 
          * @return array The decoded JSON payload.
          * @throws RuntimeException If the JSON payload is invalid or empty.
          */
-        public function getJsonPayload(): array
+        public function getJSONPayload(bool $requirePayload = false): array
         {
+            // Get the JSON payload from the request body
             $json = file_get_contents('php://input');
+
+            // Check if the JSON payload is empty
             if ($json === '' || $json === '0' || $json === false) {
-                throw new RuntimeException("Request payload is empty.");
+                if ($requirePayload) {
+                    throw new RuntimeException("Request payload is empty.");
+                }
+                return [];
             }
             
-            return $this->decodeJson($json);
+            // Decode the JSON payload
+            return $this->decodeJSON($json);
         }
     }
-
-    // /**
-    //  * Example Usages:
-    //  * */
-    //  // Example with all options enabled
-    //  $apiManager = new APIManager();
-
-    //  // --- CORS
-    //  $apiManager->useCORS([
-    //      'allowedOrigins' => ['https://example.com'],
-    //      'allowCredentials' => true,
-    //      'allowedMethods' => ['GET', 'POST', 'OPTIONS'],
-    //      'allowedHeaders' => ['Content-Type', 'Authorization'],
-    //      'exposedHeaders' => ['X-Custom-Header'],
-    //      'maxAge' => 3600,
-    //  ]);
-
-    // // --- Response manager
-    // $responseManager = $apiManager->responseManager();
-
-    // $responseManager->respond(
-    //     true, // success
-    //     {'someobject' => '...'} // data
-    //     200, // optional status code - defaults 200 if success true
-    // ); // Successful response
-
-    // $responseManager->addMessage([
-    //     'message' => 'Some message',
-    //     'type' => 'info',
-    // ]); // Adding a message
-
-    // $responseManager->addError([
-    //     'status' => "422",
-    //     'source' => ['pointer' => '/data/attributes/first-name'],
-    //     'title' => 'Invalid Attribute',
-    //     'detail' => 'First name must contain at least three characters.',
-    // ]); // Adding an error
-
-    // $responseManager->respond(
-    //     false, // success
-    //     [], // data
-    //     400, // optional status code - defaults 400 if success false
-    // ); // Error response
-
-    // // --- Rate limiter
-    // $responseManager->useRateLimiter([
-    //     'id' => 'api_limit',
-    //     'policy' => 'sliding_window',
-    //     'limit' => 100,
-    //     'interval' => '1 minute',
-    // ]);
-
-    // // --- CSRF manager
-    // $responseManager->useCsrfManager();
-
-    // // --- Security headers
-    // $responseManager->useSecurityHeaders([
-    //     'Content-Security-Policy' => "default-src 'self'",
-    //     'X-Content-Type-Options' => 'nosniff',
-    //     'X-Frame-Options' => 'DENY',
-    //     'X-XSS-Protection' => '1; mode=block',
-    // ]);
-
-    // // Adding a header
-    // $responseManager->addHeader('X-Custom-Header', 'CustomValue');
-
-    // // Removing or preventing a header
-    // $responseManager->removeHeader('X-Frame-Options');
-
-    // // Adding an error message
-    // $responseManager->errorLog([
-    //     'message' => 'Some message',
-    //     'level' => 'critical', // optional
-    //     'type' => 'error', // optional - error, info, warning
-    // ]);
-
-    // // Sanitize
-    // $responseManager->sanitizeInput('some input', 100 /** desired, optional maximum length */);
-
-    // // .. other stuff, such as decode json, etc.
 ?>
