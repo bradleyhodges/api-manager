@@ -12,13 +12,29 @@
      * 
      */
     declare(strict_types=1);
+    
+    // Load Composer autoload
+    $composerAutoloadPath = getenv('COMPOSER_AUTOLOAD_PATH') ?: '/var/www/composer/vendor/autoload.php';
+    if (!file_exists($composerAutoloadPath)) {
+        throw new RuntimeException('Composer autoload file not found at: ' . $composerAutoloadPath);
+    }
+    
+    // Load Composer autoload file
+    require_once $composerAutoloadPath;
 
+    // Load required classes
     use Monolog\Logger;
     use Monolog\Handler\StreamHandler;
     use Dotenv\Dotenv;
     use Symfony\Component\RateLimiter\RateLimiterFactory;
     use Symfony\Component\Security\Csrf\CsrfTokenManager;
 
+    /**
+     * Class APIManager
+     * 
+     * A class for managing API operations, including error handling, security headers, CORS, response management,
+     * rate limiting, CSRF protection, and utility loading.
+     */
     class APIManager
     {
         /**
@@ -52,6 +68,11 @@
         ];
 
         /**
+         * @var string|null $envFilePath Path to the .env file, if found.
+         */
+        private ?string $envFilePath = null;
+
+        /**
          * APIManager constructor.
          * 
          * Initializes the APIManager class, loads environment variables, sets up logging, and configures various options.
@@ -70,9 +91,8 @@
          */
         public function __construct(array $options = [])
         {
-            // Load environment variables
-            $dotenv = Dotenv::createImmutable(__DIR__);
-            $dotenv->load();
+            // Load environment variables using recursive search
+            $this->loadEnvironmentVariables();
 
             // Initialize logger
             $logPath = getenv('LOGS_PATH') ?: '/var/log/';
@@ -84,16 +104,86 @@
             set_error_handler([$this, 'handleError']);
             set_exception_handler([$this, 'handleException']);
             
-            // Load Composer autoload
-            $composerAutoloadPath = getenv('COMPOSER_AUTOLOAD_PATH') ?: '/var/www/vendor/autoload.php';
-            if (!file_exists($composerAutoloadPath)) {
-                throw new RuntimeException('Composer autoload file not found at: ' . $composerAutoloadPath);
-            }
-            
-            require_once $composerAutoloadPath;
-
             // Apply configuration options
             $this->applyOptions($options);
+        }
+
+        /**
+         * Loads environment variables using .env file if DOCUMENT_ROOT_PATH is not already set.
+         * If no .env file is found, uses default environment variables.
+         */
+        private function loadEnvironmentVariables(): void
+        {
+            // Check if DOCUMENT_ROOT_PATH is already set
+            if (getenv('DOCUMENT_ROOT_PATH')) {
+                // DOCUMENT_ROOT_PATH is set, no need to look for .env file
+                return;
+            }
+
+            // If DOCUMENT_ROOT_PATH is not set, search for a .env file
+            if (!$this->findAndLoadDotenv()) {
+                // If no .env file was found, set default environment variables
+                $this->setDefaultEnvironmentVariables();
+            }
+        }
+
+        /**
+         * Finds the .env file by recursively searching up to the DOCUMENT_ROOT_PATH or /var/www/.
+         * Caches the result to avoid repeated searches. If found, loads the .env file with safeLoad().
+         * 
+         * @return bool True if a .env file was found and loaded, false otherwise.
+         */
+        private function findAndLoadDotenv(): bool
+        {
+            // If we've already found and loaded the .env file, skip the search
+            if ($this->envFilePath !== null) {
+                return true;
+            }
+
+            // Start from the current directory
+            $currentDir = __DIR__;
+            $documentRoot = getenv('DOCUMENT_ROOT_PATH') ?: '/var/www/';
+            $documentRoot = rtrim(realpath($documentRoot), '/'); // Normalize the document root path
+
+            // Prevent infinite loops: Track visited directories
+            $visitedDirs = [];
+
+            while (!in_array($currentDir, $visitedDirs)) {
+                // Add current directory to visited directories
+                $visitedDirs[] = $currentDir;
+
+                // Check for .env file in the current directory
+                if (file_exists($currentDir . '/.env')) {
+                    // Cache the .env file path
+                    $this->envFilePath = $currentDir . '/.env';
+
+                    // Load the .env file safely
+                    $dotenv = Dotenv::createImmutable($currentDir);
+                    $dotenv->safeLoad();
+                    return true; // Stop searching once the .env file is found
+                }
+
+                // Stop searching if we are at the document root
+                if ($currentDir === $documentRoot || $currentDir === '/') {
+                    break;
+                }
+
+                // Move to the parent directory
+                $currentDir = dirname($currentDir);
+            }
+
+            return false; // No .env file was found
+        }
+
+        /**
+         * Sets default environment variables if no .env file is found.
+         */
+        private function setDefaultEnvironmentVariables(): void
+        {
+            putenv('DOCUMENT_ROOT_PATH=/var/www');
+            putenv('LOGS_PATH=/var/log/caddy');
+            putenv('COMPOSER_AUTOLOAD_PATH=/var/www/composer/vendor/autoload.php');
+            putenv('ENFORCE_SAFE_REQUIRES=true');
         }
 
         /**
