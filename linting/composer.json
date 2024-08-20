@@ -13,7 +13,8 @@
     "phpstan/phpstan": "^1.11",
     "phpstan/extension-installer": "^1.2",
     "phpstan/phpstan-strict-rules": "^1.2",
-    "rector/rector": "^1.2"
+    "rector/rector": "^1.2",
+    "phpstan/phpstan-deprecation-rules": "^1.2"
   },
   "scripts": {
     "watch": "npx nodemon --watch ../ --ext php --ignore ../linting/** --exec \"vendor/bin/phpstan.bat analyse --configuration=phpstan.neon\"",
