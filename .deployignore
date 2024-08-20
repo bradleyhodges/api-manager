@@ -1,4 +1,4 @@
-/tests/
+/linting/
 README.md
 LICENSE
 phpstan.neon

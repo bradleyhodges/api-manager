@@ -1,6 +1,0 @@
-parameters:
-    level: max
-    paths:
-        - cors.php
-        - responseManager.php
-        - sanitize.php

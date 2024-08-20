@@ -1,5 +1,6 @@
 {
-    "watch": ["cors.php", "responseManager.php", "sanitize.php"],
+    "watch": ["./"],
     "ext": "php",
-    "exec": "vendor/bin/phpstan analyse"
-}  
+    "ignore": ["linting/**"],
+    "exec": "linting\\vendor\\bin\\phpstan.bat analyse --configuration=linting/phpstan.neon"
+}

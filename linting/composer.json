@@ -1,0 +1,15 @@
+{
+  "name": "dfes-ses/common-api-utilities-linting",
+  "require": {
+      "php": "^7.4 || ^8.0"
+  },
+  "config": {
+      "process-timeout": 1800
+  },
+  "require-dev": {
+      "phpstan/phpstan": "^1.11"
+  },
+  "scripts": {
+    "watch": "npx nodemon --watch ../ --ext php --ignore ../linting/** --exec \"vendor/bin/phpstan.bat analyse --configuration=phpstan.neon\""
+  }
+}

@@ -1,8 +1,0 @@
-{
-    "scripts": {
-        "watch": "nodemon"
-    },
-    "require-dev": {
-        "phpstan/phpstan": "^1.11"
-    }
-}
