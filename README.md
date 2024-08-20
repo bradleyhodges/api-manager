@@ -1,6 +1,6 @@
 # 🚒 Common API Utilities
 
-Welcome to the **Common API Utilities** repository! This repository contains a set of utility scripts used by publically-facing State Emergency Service (SES) APIs. These utilities provide common functions like CORS handling, response management, and sanitization, all crucial for robust and secure API services.
+Welcome to the **Common API Utilities** repository! This repository contains a set of utility scripts used by publically-facing State Emergency Service (SES) APIs. These utilities provide common functions like CORS handling, response management, and sanitization - all crucial for robust and secure API services.
 
 ## 📂 Repository Structure
 
@@ -13,13 +13,23 @@ Here's a brief overview of the repository files:
 
 ## ⚙️ Dependencies
 
-We utilize a few key packages to enhance the functionality and security of our utilities:
+We utilize several key packages to enhance the functionality, security, and performance of our utilities:
 
 - **[MeekroDB](https://github.com/SergeyTsalkov/meekrodb)**: A lightweight, easy-to-use MySQL database library. (v3.0+)
 - **[Guzzle](https://github.com/guzzle/guzzle)**: A PHP HTTP client for sending HTTP requests. (v7.9+)
 - **[Monolog](https://github.com/Seldaek/monolog)**: A logging library that sends your logs to files, sockets, inboxes, databases, etc. (v3.7+)
 - **[libphonenumber-for-php](https://github.com/giggsey/libphonenumber-for-php)**: A library for parsing, formatting, and validating international phone numbers. (v8.13+)
 - **[ULID](https://github.com/robinvdvleuten/ulid)**: A library for generating ULIDs (Universally Unique Lexicographically Sortable Identifiers). (v5.0+)
+- **[phpdotenv](https://github.com/vlucas/phpdotenv)**: A library for loading environment variables from a `.env` file into `$_ENV` and `$_SERVER`. (v5.6+)
+- **[Carbon](https://github.com/briannesbitt/Carbon)**: An extension for PHP DateTime to handle dates and times effectively. (v3.8+)
+- **[Symfony Validator](https://github.com/symfony/validator)**: A powerful library for validating data. (v7.1+)
+- **[Flysystem](https://github.com/thephpleague/flysystem)**: A filesystem abstraction layer that allows you to work with local filesystems, SFTP, Amazon S3, and more. (v3.0+)
+- **[lcobucci/jwt](https://github.com/lcobucci/jwt)**: A PHP library to generate, parse, and validate JSON Web Tokens (JWT). (v4.0+)
+- **[Symfony Rate Limiter](https://github.com/symfony/rate-limiter)**: A rate-limiting component for preventing excessive API usage. (v7.1+)
+- **[Symfony Security CSRF](https://github.com/symfony/security-csrf)**: Provides CSRF protection to prevent cross-site request forgery attacks. (v7.1+)
+- **[phpseclib](https://github.com/phpseclib/phpseclib)**: A pure PHP library for encryption, decryption, and other security operations. (v3.0+)
+
+**Note:** `thephpleague/flysystem` requires the `fileinfo` extension to be enabled in PHP to function properly. More info: [php.net/manual/en/fileinfo.inst...](https://www.php.net/manual/en/fileinfo.installation.php)
 
 To install all dependencies, run:
 
