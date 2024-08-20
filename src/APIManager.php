@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
     /**
      * APIManager.php
      * 
@@ -24,8 +24,6 @@
     use RuntimeException;
     use InvalidArgumentException;
 
-    declare(strict_types=1);
-    
     /**
      * Class APIManager
      * 

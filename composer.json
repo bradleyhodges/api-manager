@@ -10,6 +10,7 @@
         }
     },
     "require": {
+        "php": ">=8.2",
         "sergeytsalkov/meekrodb": "^3.0",
         "guzzlehttp/guzzle": "^7.9",
         "monolog/monolog": "^3.7",
