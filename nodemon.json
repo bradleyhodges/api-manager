@@ -1,0 +1,5 @@
+{
+    "watch": ["cors.php", "responseManager.php", "sanitize.php"],
+    "ext": "php",
+    "exec": "vendor/bin/phpstan analyse"
+}  
