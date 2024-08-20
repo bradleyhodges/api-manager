@@ -2,18 +2,12 @@
     "name": "bradleyhodges/api-manager",
     "description": "A powerful, robust, secure, and compliant API manager for PHP-based APIs.",
     "type": "library",
-    "version": "1.0.0",
+    "version": "1.3.0",
     "license": "MIT",
     "autoload": {
         "psr-4": {
             "APIManager\\": "src/"
-        },
-        "files": [
-            "src/CORS.php",
-            "src/errorLog.php",
-            "src/responseManager.php",
-            "src/sanitize.php"
-        ]
+        }
     },
     "require": {
         "sergeytsalkov/meekrodb": "^3.0",
