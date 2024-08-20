@@ -1,0 +1,14 @@
+[
+    {
+        "useName": "CORS",
+        "path": "../src/CORS.php"
+    },
+    {
+        "useName": "responseManager",
+        "path": "../src/responseManager.php"
+    },
+    {
+        "useName": "sanitize",
+        "path": "../src/sanitize.php"
+    }
+]

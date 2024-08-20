@@ -2,14 +2,36 @@
 
 Welcome to the **Common API Utilities** repository! This repository contains a set of utility scripts used by publically-facing State Emergency Service (SES) APIs. These utilities provide common functions like CORS handling, response management, and sanitization - all crucial for robust and secure API services.
 
+We've also created the [`APIManager` class](./APIManager/), which is a powerful, robust, and secure PHP class for managing various API-related tasks, including:
+
+- **Composer autoloading**
+- **Dynamic dependency loading**
+- **CORS headers**
+- **Response management**
+- **Error logging**
+- **Security headers**
+- **Input sanitization**
+- **JSON handling**
+- **CSRF protection**
+- **Rate limiting**
+
 ## 📂 Repository Structure
 
 Here's a brief overview of the repository files:
 
-- **[`composer.json`](#dependencies)**: Dependencies for the utilities, managed via Composer.
-- **[`cors.php`](#1-cors-handling-corsphp)**: Handles Cross-Origin Resource Sharing (CORS) to ensure secure API interactions.
-- **[`responseManager.php`](#2-response-management-responsemanagerphp)**: Manages API responses in a standardized and consistent manner.
-- **[`sanitize.php`](#3-sanitization-sanitizephp)**: Sanitizes input to prevent security vulnerabilities such as SQL injection and XSS.
+- dfes-ses/common-api-utilities
+  - **`APIManager/`**
+    - **[`class.php`](./APIManager/class.php)**: APIManager class for managing utilities in a single interface
+    - **[`loader.json`](./APIManager/loader.json)**: Configuration file for loading utilities in APIManager
+  - **[`README.md`](./README.md)**: This documentation
+  - **[`composer.json`](./composer.json)**: Dependencies for the utilities, managed via Composer
+  - **[`.deployignore`](./deployignore)**: A `.gitignore`-style file for specifying files which should be ignored in production repo clones
+  - **`linting/`**
+    - *Various linting resources for development - not required in production*
+  - **`src/`**
+    - **[`CORS.php`](./src/CORS.php)**: Handles Cross-Origin Resource Sharing (CORS) to ensure secure API interactions
+    - **[`responseManager.php`](./src/responseManager.php)**: Manages API responses in a standardized and consistent manner
+    - **[`sanitize.php`](./src/sanitize.php)**: Sanitizes input to prevent security vulnerabilities such as SQL injection and XSS
 
 ## ⚙️ Dependencies
 
@@ -38,6 +60,8 @@ composer install
 ```
 
 ## 🛠️ Usage
+
+You can either use the individual functions and classes provided in the `src/` directory or opt for the [`APIManager` class](./APIManager/), which integrates all utilities into a single class. The choice is yours!
 
 ### 1. CORS Handling ([`cors.php`](./cors.php))
 
@@ -90,6 +114,28 @@ $cleanInput = sanitize($userInput, 100);
 ```
 
 This function sanitizes input strings, trims whitespace, and optionally truncates to a specified length. It also validates that the input is UTF-8 encoded and within a safe length limit.
+
+## 🧰 APIManager Class (Optional)
+
+For those looking for a more integrated approach, we offer the `APIManager` class, which consolidates the utilities into a single, configurable class. You can still use the standalone functions directly from the `src/` directory if you prefer.
+
+### How to Use the APIManager
+
+The `APIManager` class handles Composer autoloading, CORS, response management, logging, and more. It's designed to make your API management easier and more secure.
+
+To use the `APIManager` in your files:
+
+```php
+require_once 'path/to/APIManager.php';
+
+$apiManager = new APIManager([
+    // Example: Enable CORS and response management
+    'useUtilities' => ['CORS', 'responseManager'],
+]);
+
+// Example: Use the response manager
+$responseManager = $apiManager->getResponseManager();
+$responseManager->respondToClient(true, ['data' => 'success']);
 
 
 ## 🛡️ Security Considerations
