@@ -1,6 +1,6 @@
 # Linting Setup Guide 🚀
 
-Welcome to the development environment linting setup for this project! This guide will walk you through installing PHP, Composer, PHPStan, and nodemon. We use PHPStan for automatic linting to ensure code quality, and nodemon to automatically run PHPStan whenever files are changed.
+Welcome to the development environment linting setup for this project! This guide will walk you through installing PHP, Composer, PHPStan, Rector, and nodemon. We use PHPStan for automatic linting to ensure code quality, and nodemon to automatically run PHPStan whenever files are changed.
 
 All linting-related configuration and utilities are contained in the `linting/` (this) directory, which is responsible for handling the project's code quality checks.
 
@@ -91,16 +91,16 @@ The linting functions of this project are intended to be run on a Windows machin
      composer run watch
      ```
 
-   - This command will use `nodemon` to watch for changes in PHP files in the root directory and automatically run PHPStan to check for code issues.
+   This command will use `nodemon` to watch for changes in PHP files in the root directory and automatically run PHPStan to check for code issues.
 
-6. **Run PHPStan Automatically**:
+6. **Run Rector**:
    - To run Rector and check for potential improvements and refactoring opportunities, run:
 
      ```bash
      composer rector:dry-run
      ```
 
-   - This will show you what changes Rector would apply without actually modifying the files.
+   This will show you what changes Rector would apply without actually modifying the files.
 
    - To apply the suggested changes, run:
 
