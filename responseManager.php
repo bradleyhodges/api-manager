@@ -121,8 +121,12 @@
          */
         public function bailOut(?int $statusCode = 400): never
         {
-            // Check if there are any global messages or errors
-            if (empty($this->globalMessages) && empty($this->globalErrors)) {
+            // Ensure that globalMessages and globalErrors are initialized as arrays
+            $this->globalMessages = $this->globalMessages ?? [];
+            $this->globalErrors = $this->globalErrors ?? [];
+
+            // Check if both arrays are empty
+            if (count($this->globalMessages) === 0 && count($this->globalErrors) === 0) {
                 // If none are present, provide a default message
                 $this->addGlobalMessage("The API Controller received an instruction to bail out but was not provided a reason.");
             }
