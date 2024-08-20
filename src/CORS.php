@@ -31,12 +31,12 @@
         // Check if the origin is in the allowed list
         if (in_array($origin, $allowedOrigins, true)) {
             // Allow requests from this origin
-            header("Access-Control-Allow-Origin: $origin");
+            header('Access-Control-Allow-Origin: ' . $origin);
             header('Access-Control-Allow-Credentials: true');
             header('Access-Control-Max-Age: 86400');  // Cache for 1 day
         } else {
             // Log disallowed origin attempt
-            error_log("Disallowed CORS origin: $origin");
+            error_log('Disallowed CORS origin: ' . $origin);
 
             // If the origin is not allowed, send a 403 Forbidden response
             http_response_code(403);
@@ -54,7 +54,7 @@
                 if (in_array($requestMethod, $allowedMethods, true)) {
                     header("Access-Control-Allow-Methods: " . implode(', ', $allowedMethods));
                 } else {
-                    error_log("Unsupported HTTP method requested in preflight: $requestMethod");
+                    error_log('Unsupported HTTP method requested in preflight: ' . $requestMethod);
                     throw new Exception('Unsupported HTTP method requested in preflight.');
                 }
             }
@@ -62,7 +62,7 @@
             // Check if custom headers are being requested
             if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS'])) {
                 $allowedHeaders = filter_var($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS'], FILTER_SANITIZE_STRING);
-                header("Access-Control-Allow-Headers: $allowedHeaders");
+                header('Access-Control-Allow-Headers: ' . $allowedHeaders);
             }
 
             // End the preflight OPTIONS request

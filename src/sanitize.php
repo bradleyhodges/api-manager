@@ -40,12 +40,12 @@
         // Set a maximum allowed length to prevent excessively large inputs
         $maxAllowedLength = 10000; // Define a reasonable maximum input length
         if (strlen($data) > $maxAllowedLength) {
-            throw new InvalidArgumentException("Input data exceeds the maximum allowed length of $maxAllowedLength characters.");
+            throw new InvalidArgumentException(sprintf('Input data exceeds the maximum allowed length of %d characters.', $maxAllowedLength));
         }
 
         // If maxLength is specified, truncate the string safely using mb_substr
         if ($maxLength !== null) {
-            $data = mb_substr($data, 0, $maxLength);
+            return mb_substr($data, 0, $maxLength);
         }
 
         return $data;

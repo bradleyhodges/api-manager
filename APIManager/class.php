@@ -29,12 +29,12 @@
         /**
          * @var ApiResponseManager|null $responseManager Instance of the response manager, if initialized.
          */
-        private ?ApiResponseManager $responseManager = null;
+        private ?ApiResponseManager $apiResponseManager = null;
 
         /**
          * @var RateLimiterFactory|null $limiterFactory Instance of the rate limiter factory, if initialized.
          */
-        private ?RateLimiterFactory $limiterFactory = null;
+        private ?RateLimiterFactory $rateLimiterFactory = null;
 
         /**
          * @var CsrfTokenManager|null $csrfTokenManager Instance of the CSRF token manager, if initialized.
@@ -87,8 +87,9 @@
             // Load Composer autoload
             $composerAutoloadPath = getenv('COMPOSER_AUTOLOAD_PATH') ?: '/var/www/vendor/autoload.php';
             if (!file_exists($composerAutoloadPath)) {
-                throw new RuntimeException("Composer autoload file not found at: {$composerAutoloadPath}");
+                throw new RuntimeException('Composer autoload file not found at: ' . $composerAutoloadPath);
             }
+            
             require_once $composerAutoloadPath;
 
             // Apply configuration options
@@ -127,7 +128,7 @@
 
             // Initialize CSRF token manager if not disabled
             if (empty($options['disableCsrfManager'])) {
-                $this->initializeCsrfManager($options['csrfConfig'] ?? []);
+                $this->initializeCsrfManager();
             }
 
             // Load specified utilities
@@ -147,7 +148,7 @@
             foreach ($headers as $header => $value) {
                 // Only set header if it hasn't been set already
                 if (!headers_sent() && !isset($_SERVER['HTTP_' . strtoupper(str_replace('-', '_', $header))])) {
-                    header("{$header}: {$value}");
+                    header(sprintf('%s: %s', $header, $value));
                 }
             }
         }
@@ -162,7 +163,7 @@
         private function handleCORS(array $corsOptions): void
         {
             $corsPath = $this->getUtilityPath('CORS');
-            if ($corsPath) {
+            if ($corsPath !== null && $corsPath !== '' && $corsPath !== '0') {
                 require_once $corsPath;
                 CORS($corsOptions);  // Pass options to the CORS handler
             }
@@ -176,9 +177,9 @@
         private function initializeResponseManager(): void
         {
             $responseManagerPath = $this->getUtilityPath('responseManager');
-            if ($responseManagerPath) {
+            if ($responseManagerPath !== null && $responseManagerPath !== '' && $responseManagerPath !== '0') {
                 require_once $responseManagerPath;
-                $this->responseManager = new ApiResponseManager();
+                $this->apiResponseManager = new ApiResponseManager();
             }
         }
 
@@ -198,17 +199,15 @@
                 'interval' => '1 minute',
             ];
             $rateLimiterConfig = array_merge($defaultConfig, $config);
-            $this->limiterFactory = new RateLimiterFactory($rateLimiterConfig);
+            $this->rateLimiterFactory = new RateLimiterFactory($rateLimiterConfig);
         }
 
         /**
          * Initializes the CSRF (Cross-Site Request Forgery) token manager.
-         * 
+         *
          * This method sets up CSRF protection for the application.
-         * 
-         * @param array $config Configuration options for CSRF management.
          */
-        private function initializeCsrfManager(array $config): void
+        private function initializeCsrfManager(): void
         {
             $this->csrfTokenManager = new CsrfTokenManager();
             // Apply additional config if needed
@@ -222,9 +221,9 @@
         private function loadUtilities(array $utilities): void
         {
             $loaderConfig = $this->getLoaderConfig();
-            foreach ($utilities as $utilityName) {
-                $utilityPath = $this->getUtilityPath($utilityName, $loaderConfig);
-                if ($utilityPath) {
+            foreach ($utilities as $utility) {
+                $utilityPath = $this->getUtilityPath($utility, $loaderConfig);
+                if ($utilityPath !== null && $utilityPath !== '' && $utilityPath !== '0') {
                     require_once $utilityPath;
                 }
             }
@@ -241,7 +240,7 @@
         public function setNewHeader(string $headerName, string $headerValue): void
         {
             if (!headers_sent()) {
-                header("{$headerName}: {$headerValue}");
+                header(sprintf('%s: %s', $headerName, $headerValue));
             }
         }
 
@@ -280,12 +279,13 @@
          */
         private function getUtilityPath(string $useName, array $config = []): ?string
         {
-            $config = $config ?: $this->getLoaderConfig();
+            $config = $config !== [] ? $config : $this->getLoaderConfig();
             foreach ($config as $utility) {
                 if ($utility['useName'] === $useName) {
                     return __DIR__ . '/' . $utility['path'];
                 }
             }
+            
             return null;
         }
 
@@ -302,20 +302,20 @@
          */
         public function handleError(int $errno, string $errstr, string $errfile, int $errline): void
         {
-            $this->logger->error("Error: {$errstr} in {$errfile} on line {$errline}");
+            $this->logger->error(sprintf('Error: %s in %s on line %d', $errstr, $errfile, $errline));
             throw new ErrorException($errstr, $errno, 0, $errfile, $errline);
         }
 
         /**
          * Exception handler for the API manager.
-         * 
+         *
          * Logs the exception and sends a 500 HTTP response with a JSON error message.
-         * 
-         * @param Throwable $exception The exception that was thrown.
+         *
+         * @param Throwable $throwable The exception that was thrown.
          */
-        public function handleException(Throwable $exception): void
+        public function handleException(Throwable $throwable): void
         {
-            $this->logger->error("Exception: {$exception->getMessage()} in {$exception->getFile()} on line {$exception->getLine()}");
+            $this->logger->error(sprintf('Exception: %s in %s on line %d', $throwable->getMessage(), $throwable->getFile(), $throwable->getLine()));
             http_response_code(500);
             echo json_encode(['error' => 'Internal server error.']);
             exit;
@@ -330,7 +330,7 @@
          */
         public function getResponseManager(): ?ApiResponseManager
         {
-            return $this->responseManager;
+            return $this->apiResponseManager;
         }    /**
         * Securely requires a file.
         * 
@@ -383,35 +383,29 @@
            $documentRoot = rtrim(realpath($documentRoot), '/') . '/';
    
            // Resolve the file path
-           if (strpos($filePath, '@/') === 0) {
-               // Replace "@/..." with the document root path
-               $filePath = $documentRoot . ltrim(substr($filePath, 2), '/');
-           } else {
-               // Otherwise, treat as a direct path
-               $filePath = realpath($filePath);
-           }
+           $filePath = strpos($filePath, '@/') === 0 ? $documentRoot . ltrim(substr($filePath, 2), '/') : realpath($filePath);
    
            // Security check: ensure the file is within the document root
            if ($filePath === false || strpos($filePath, $documentRoot) !== 0) {
                if ($safeRequires) {
                    // Log the attempt and deny the operation if SAFE_REQUIRES is enabled
-                   $this->logger->warning("Attempted to require file outside of document root: {$filePath}. Operation denied due to SAFE_REQUIRES.");
+                   $this->logger->warning(sprintf('Attempted to require file outside of document root: %s. Operation denied due to SAFE_REQUIRES.', $filePath));
                    throw new RuntimeException("Requiring files outside of the document root is not allowed with SAFE_REQUIRES enabled.");
                }
    
                if (!$force) {
                    // Log the attempt and deny the operation if the force flag is not set
-                   $this->logger->warning("Attempted to require file outside of document root without --force: {$filePath}. Operation denied.");
+                   $this->logger->warning(sprintf('Attempted to require file outside of document root without --force: %s. Operation denied.', $filePath));
                    throw new RuntimeException("Requiring files outside of the document root requires the --force flag.");
                }
    
                // Log that the force flag is being used
-               $this->logger->info("Requiring file outside of document root with --force: {$filePath}");
+               $this->logger->info('Requiring file outside of document root with --force: ' . $filePath);
            }
    
            // Check if the file exists
            if (!file_exists($filePath)) {
-               throw new RuntimeException("File not found: {$filePath}");
+               throw new RuntimeException('File not found: ' . $filePath);
            }
    
            // Require or require_once the file
@@ -431,7 +425,7 @@
          */
         public function getRateLimiterFactory(): ?RateLimiterFactory
         {
-            return $this->limiterFactory;
+            return $this->rateLimiterFactory;
         }
 
         /**
@@ -474,6 +468,7 @@
             if (json_last_error() !== JSON_ERROR_NONE) {
                 throw new RuntimeException("Invalid JSON: " . json_last_error_msg());
             }
+            
             return $data;
         }
 
@@ -492,6 +487,7 @@
             if (json_last_error() !== JSON_ERROR_NONE) {
                 throw new RuntimeException("Failed to encode JSON: " . json_last_error_msg());
             }
+            
             return $json;
         }
 
@@ -526,9 +522,10 @@
         public function getJsonPayload(): array
         {
             $json = file_get_contents('php://input');
-            if (empty($json)) {
+            if ($json === '' || $json === '0' || $json === false) {
                 throw new RuntimeException("Request payload is empty.");
             }
+            
             return $this->decodeJson($json);
         }
     }

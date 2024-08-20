@@ -36,7 +36,6 @@
          * Adds a message to the global messages array.
          *
          * @param string $message The message to add.
-         * @return void
          */
         public function addGlobalMessage(string $message): void
         {
@@ -47,7 +46,6 @@
          * Adds an error to the global errors array.
          *
          * @param string $error The error to add.
-         * @return void
          */
         public function addGlobalError(string $error): void
         {
@@ -63,7 +61,6 @@
          * @param array<string>|null $messages An array of messages to include in the response.
          * @param array<string>|null $errors An array of errors to include in the response.
          * @param int|null $statusCode The HTTP status code for the response.
-         * @return never
          */
         public function respondToClient(
             bool $success = true,
@@ -117,7 +114,6 @@
          * This method is useful when you need to stop the execution and respond with an error.
          *
          * @param int|null $statusCode The HTTP status code for the response. Defaults to 400.
-         * @return never
          */
         public function bailOut(?int $statusCode = 400): never
         {
@@ -126,7 +122,7 @@
             $this->globalErrors = $this->globalErrors ?? [];
 
             // Check if both arrays are empty
-            if (count($this->globalMessages) === 0 && count($this->globalErrors) === 0) {
+            if ($this->globalMessages === [] && $this->globalErrors === []) {
                 // If none are present, provide a default message
                 $this->addGlobalMessage("The API Controller received an instruction to bail out but was not provided a reason.");
             }
