@@ -8,6 +8,7 @@
         "vlucas/phpdotenv": "^5.6",
         "nesbot/carbon": "^3.8",
         "symfony/validator": "^7.1",
-        "league/flysystem": "3.0"
+        "league/flysystem": "3.0",
+        "lcobucci/jwt": "^4.0"
     }
 }
