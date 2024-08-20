@@ -1,15 +1,23 @@
 {
   "name": "dfes-ses/common-api-utilities-linting",
   "require": {
-      "php": "^7.4 || ^8.0"
+    "php": "^7.4 || ^8.0"
   },
   "config": {
-      "process-timeout": 1800
+    "process-timeout": 1800,
+    "allow-plugins": {
+      "phpstan/extension-installer": true
+    }
   },
   "require-dev": {
-      "phpstan/phpstan": "^1.11"
+    "phpstan/phpstan": "^1.11",
+    "phpstan/extension-installer": "^1.2",
+    "phpstan/phpstan-strict-rules": "^1.2",
+    "rector/rector": "^1.2"
   },
   "scripts": {
-    "watch": "npx nodemon --watch ../ --ext php --ignore ../linting/** --exec \"vendor/bin/phpstan.bat analyse --configuration=phpstan.neon\""
+    "watch": "npx nodemon --watch ../ --ext php --ignore ../linting/** --exec \"vendor/bin/phpstan.bat analyse --configuration=phpstan.neon\"",
+    "rector": "vendor/bin/rector process",
+    "rector:dry-run": "vendor/bin/rector process --dry-run"
   }
 }

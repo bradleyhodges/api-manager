@@ -37,6 +37,7 @@ You may want to add the `linting/` directory to your `.gitignore` when deploying
 ## Tools Used 🔧
 
 - **[PHPStan](https://github.com/phpstan/phpstan)**: A static analysis tool for PHP that focuses on finding errors in your code without running it.
+- **[Rector](https://github.com/rectorphp/rector)**: A tool for automated code refactoring and upgrades to improve code quality, type safety, and security.
 - **[Composer](https://github.com/composer/composer)**: A dependency manager for PHP, used to manage project dependencies.
 - **[Nodemon](https://github.com/remy/nodemon)**: A tool that monitors changes in your source files and automatically restarts applications. In this project, it's used to watch for PHP file changes and run PHPStan.
 
@@ -92,9 +93,25 @@ The linting functions of this project are intended to be run on a Windows machin
 
    - This command will use `nodemon` to watch for changes in PHP files in the root directory and automatically run PHPStan to check for code issues.
 
+6. **Run PHPStan Automatically**:
+   - To run Rector and check for potential improvements and refactoring opportunities, run:
+
+     ```bash
+     composer rector:dry-run
+     ```
+
+   - This will show you what changes Rector would apply without actually modifying the files.
+
+   - To apply the suggested changes, run:
+
+     ```bash
+     composer rector
+     ```
+
 ## Summary 🎯
 
 - **PHPStan** is used for automatic linting to ensure code quality.
+- **Rector** is used for automated code refactoring, improving code quality, type safety, and security.
 - **nodemon** watches for file changes and triggers PHPStan automatically.
 - **linting/** directory contains all the configuration and tools related to linting.
 - Follow these steps to set up the environment and start working with the project.
