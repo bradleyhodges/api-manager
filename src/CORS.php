@@ -1,23 +1,31 @@
 <?php
-    use Carbon\Carbon;
+    namespace APIManager\Classes;
 
+    use APIManager\Classes\responseManager;
+    use APIManager\Classes\errorLog;
+    use Throwable;
+    
     /**
-     * CORSHandler class to manage Cross-Origin Resource Sharing (CORS) in a secure and RFC-compliant manner.
+     * CORS class to manage Cross-Origin Resource Sharing (CORS) in a secure and RFC-compliant manner.
      * This class provides methods to handle CORS requests and integrates optional logging functionality.
      */
-    class CORSHandler
+    class CORS
     {
-        private ?ErrorLogger $errorLogger;
+        private ?errorLog $errorLog;
+        
+        private responseManager $responseManager;    
 
         /**
-         * CORSHandler constructor.
-         * Initializes the class with an optional logger.
+         * CORS constructor.
+         * Initializes the class with a logger and a response manager.
          *
-         * @param ErrorLogger|null $errorLogger An optional logger instance. If null, default to error_log.
+         * @param responseManager $responseManager An instance of the response manager.
+         * @param errorLog $errorLog The logger instance.
          */
-        public function __construct(?ErrorLogger $errorLogger = null)
+        public function __construct(responseManager $responseManager, ?errorLog $errorLog)
         {
-            $this->errorLogger = $errorLogger;
+            $this->responseManager = $responseManager;
+            $this->errorLog = $errorLog;
         }
 
         /**
@@ -43,68 +51,62 @@
             int $maxAge = 86400
         ): void {
             try {
-                $scriptName = basename(__FILE__);  // Retrieve the name of the current script
-                $timestamp = Carbon::now()->format('Y-m-d H:i:s');  // Get the current timestamp
-
-                // Ensure that headers have not been sent already
-                if (headers_sent()) {
-                    $this->logError("Headers already sent, cannot set CORS headers.");
-                    throw new RuntimeException("Headers already sent, cannot set CORS headers.");
+                $this->checkHeaders();
+    
+                // Sanitize and validate the Origin header
+                $origin = filter_var($_SERVER['HTTP_ORIGIN'], FILTER_VALIDATE_URL);
+                if ($origin === false) {
+                    $this->logError("Invalid origin format: " . $_SERVER['HTTP_ORIGIN']);
+                    $this->responseManager->respondWithError(400, "Bad Request: Invalid origin format.");
+                    return;
                 }
-
-                // If allowedOrigins is not provided or is empty, default to an empty array (no allowed origins).
-                $allowedOrigins = $allowedOrigins ?? [];
-
-                // Ensure the $_SERVER superglobal contains the required keys
-                if (!isset($_SERVER['HTTP_ORIGIN']) || !isset($_SERVER['REQUEST_METHOD'])) {
-                    $this->logError("Missing HTTP_ORIGIN or REQUEST_METHOD in the request.");
-                    http_response_code(400);  // Bad Request
-                    exit('Bad Request: Missing required headers.');
-                }
-
-                // Sanitize the Origin header
-                $origin = filter_var($_SERVER['HTTP_ORIGIN'], FILTER_SANITIZE_URL);
-
+    
                 // Check if the origin is in the allowed list
-                if (in_array($origin, $allowedOrigins, true)) {
-                    // Allow requests from this origin
+                if (in_array($origin, $allowedOrigins ?? [], true)) {
                     header('Access-Control-Allow-Origin: ' . $origin);
-
                     if ($allowCredentials) {
                         header('Access-Control-Allow-Credentials: true');
                     }
-
-                    // Set headers for exposed headers
+                    
                     if ($exposedHeaders !== []) {
                         header('Access-Control-Expose-Headers: ' . implode(', ', $exposedHeaders));
                     }
-
-                    // Handle preflight requests (OPTIONS method)
-                    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-                        // Respond with allowed methods
-                        header('Access-Control-Allow-Methods: ' . implode(', ', $allowedMethods));
-
-                        // Respond with allowed headers
-                        header('Access-Control-Allow-Headers: ' . implode(', ', $allowedHeaders));
-
-                        // Set max age for caching the preflight response
-                        header('Access-Control-Max-Age: ' . $maxAge);
-
-                        // Preflight response does not have content
-                        http_response_code(204);
-                        exit(0);
-                    }
+    
+                    $this->handlePreflightRequest($allowedMethods, $allowedHeaders, $maxAge);
                 } else {
                     $this->logError("Disallowed CORS origin: " . $origin);
-
-                    // If the origin is not allowed, send a 403 Forbidden response
-                    http_response_code(403);
-                    exit('Origin not allowed');
+                    $this->responseManager->respondWithError(403, "Forbidden: Origin not allowed.");
+                    return;
                 }
-            } catch (Exception $exception) {
-                $this->logCritical($exception);
-                http_response_code(500);  // Internal Server Error
-                exit('An internal server error occurred.');
+            } catch (Throwable $throwable) {
+                $this->logCritical($throwable);
+                $this->responseManager->respondWithError(500, "Internal server error occurred.");
+            }
+        }
+
+        
+    private function checkHeaders(): void
+        {
+            if (headers_sent()) {
+                $this->logError("Headers already sent, cannot set CORS headers.");
+                throw new RuntimeException("Headers already sent, cannot set CORS headers.");
+            }
+
+            if (!isset($_SERVER['HTTP_ORIGIN']) || !isset($_SERVER['REQUEST_METHOD'])) {
+                $this->logError("Missing HTTP_ORIGIN or REQUEST_METHOD in the request.");
+                $this->responseManager->respondWithError(400, "Bad Request: Missing required headers.");
+                exit;
+            }
+        }
+
+        private function handlePreflightRequest(array $allowedMethods, array $allowedHeaders, int $maxAge): void
+        {
+            if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+                header('Access-Control-Allow-Methods: ' . implode(', ', $allowedMethods));
+                header('Access-Control-Allow-Headers: ' . implode(', ', $allowedHeaders));
+                header('Access-Control-Max-Age: ' . $maxAge);
+                $this->responseManager->respondWithNoContent();
+                exit;
             }
         }
 
@@ -115,8 +117,8 @@
          */
         private function logError(string $message): void
         {
-            if ($this->errorLogger) {
-                $this->errorLogger->logError($message);
+            if ($this->errorLog instanceof errorLog) {
+                $this->errorLog->logError($message);
             } else {
                 error_log($message);
             }
@@ -129,34 +131,11 @@
          */
         private function logCritical(Throwable $throwable): void
         {
-            if ($this->errorLogger) {
-                $this->errorLogger->logCritical($throwable);
+            if ($this->errorLog instanceof errorLog) {
+                $this->errorLog->logCritical($throwable);
             } else {
                 error_log($throwable->getMessage() . ' in ' . $throwable->getFile() . ' on line ' . $throwable->getLine());
             }
         }
     }
-
-    /**
-     * Example usage:
-     * 
-     * // Create a CORSHandler instance with default logging to error_log
-     * $corsHandler = new CORSHandler();
-     * $corsHandler->handleCORS(
-     *     ['https://example.com', 'https://another-allowed-origin.com'],
-     *     true,  // Allow credentials
-     *     ['GET', 'POST', 'OPTIONS'],  // Allowed methods
-     *     ['Content-Type', 'Authorization'],  // Allowed headers
-     *     ['X-Custom-Header'],  // Exposed headers
-     *     3600  // Max age for preflight cache
-     * );
-     * 
-     * // Create a CORSHandler instance with a custom logger
-     * $customLogger = new ErrorLogger();
-     * $corsHandlerWithLogger = new CORSHandler($customLogger);
-     * $corsHandlerWithLogger->handleCORS(['https://example.com', 'https://another-allowed-origin.com']);
-     * 
-     * // No origins allowed (default behavior) and default to error_log
-     * $corsHandler->handleCORS();
-     */
 ?>

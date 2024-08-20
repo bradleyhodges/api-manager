@@ -1,7 +1,10 @@
 <?php
+    namespace APIManager\Classes;
+
     use Monolog\Logger;
     use Monolog\Handler\StreamHandler;
     use Monolog\Formatter\LineFormatter;
+    use Throwable;
 
     /**
      * ErrorLogger class that standardizes error logging with detailed information.
