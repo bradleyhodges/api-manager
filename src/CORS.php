@@ -1,8 +1,8 @@
 <?php
-    namespace APIManager\Classes;
+    namespace APIManager;
 
-    use APIManager\Classes\responseManager;
-    use APIManager\Classes\errorLog;
+    use APIManager\responseManager;
+    use APIManager\errorLog;
     use Throwable;
     
     /**

@@ -1,5 +1,5 @@
 <?php
-    namespace APIManager\Classes;
+    namespace APIManager;
 
     use Monolog\Logger;
     use Monolog\Handler\StreamHandler;

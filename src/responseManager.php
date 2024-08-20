@@ -1,6 +1,6 @@
 <?php
 
-    namespace APIManager\Classes;
+    namespace APIManager;
 
     use Throwable;
     use JsonException;

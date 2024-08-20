@@ -15,9 +15,9 @@ declare(strict_types=1);
     namespace APIManager;
 
     use ErrorException;
-    use APIManager\Classes\CORS;
-    use APIManager\Classes\responseManager;
-    use APIManager\Classes\errorLog;
+    use APIManager\CORS;
+    use APIManager\responseManager;
+    use APIManager\errorLog;
     use Symfony\Component\RateLimiter\RateLimiterFactory;
     use Symfony\Component\Security\Csrf\CsrfTokenManager;
     use Dotenv\Dotenv;
