@@ -255,7 +255,26 @@
             $corsPath = $this->getUtilityPath('CORS');
             if ($corsPath !== null && $corsPath !== '' && $corsPath !== '0') {
                 require_once $corsPath;
-                CORS($corsOptions);  // Pass options to the CORS handler
+
+                // Extract CORS options
+                $allowedOrigins = $corsOptions['allowedOrigins'] ?? null;
+                $allowCredentials = $corsOptions['allowCredentials'] ?? false;
+                $allowedMethods = $corsOptions['allowedMethods'] ?? ['GET', 'POST', 'OPTIONS'];
+                $allowedHeaders = $corsOptions['allowedHeaders'] ?? ['Content-Type', 'Authorization'];
+                $exposedHeaders = $corsOptions['exposedHeaders'] ?? [];
+                $maxAge = $corsOptions['maxAge'] ?? 86400;
+                $logger = $corsOptions['logger'] ?? null;  // Optional logger
+
+                // If the logger option is not provided, use the API Manager-provided logger
+                if ($logger === null) {
+                    $logger = $this->logger;
+                }
+
+                // Instantiate the CORSHandler class
+                $corsHandler = new CORSHandler($logger);
+
+                // Handle the CORS request using the provided options
+                $corsHandler->handleCORS($allowedOrigins, $allowCredentials, $allowedMethods, $allowedHeaders, $exposedHeaders, $maxAge);
             }
         }
 
@@ -630,7 +649,6 @@
      * // Basic Usage:
      * // Initialize the API manager with default settings and load the MeekroDB dependency.
      * $apiManager = new APIManager([
-     *     'dependencies' => ['SergeyTsalkov/meekrodb'],
      *     'useUtilities' => ['CORS'],
      * ]);
      *
@@ -644,7 +662,14 @@
      * // Initialize the API manager with custom security headers and CORS options.
      * $apiManager = new APIManager([
      *     'customHeaders' => ['X-Custom-Header' => 'CustomValue'],
-     *     'corsOptions' => ['allowedOrigins' => ['https://example.com']],
+     *     'corsOptions' => [
+     *         ['https://example.com', 'https://another-allowed-origin.com'], // Allowed origins
+     *         true,  // Allow credentials
+     *         ['GET', 'POST', 'OPTIONS'],  // Allowed methods
+     *         ['Content-Type', 'Authorization'],  // Allowed headers
+     *         ['X-Custom-Header'],  // Exposed headers
+     *         3600  // Max age for preflight cache
+     *     ],
      * ]);
      *
      * // Set an additional custom security header.
