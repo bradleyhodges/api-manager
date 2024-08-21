@@ -47,3 +47,6 @@ phpunit.xml.dist
 phpstan.neon
 nodemon.json
 .deployignore
+
+# Releases
+/releases/
