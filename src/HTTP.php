@@ -106,7 +106,7 @@
             
             // Initialize the logger (lazy-loaded for performance)
             $this->logger = $logger ?? new Logger('http');
-            if ($logger === null) {
+            if (!$logger instanceof Logger) {
                 $this->logger->pushHandler(new StreamHandler('php://stdout', Logger::DEBUG));
             }
 
@@ -552,11 +552,12 @@
 
             // Log the results for debugging purposes
             $this->logger->info("Connection times", ['IPv6' => $ipv6Time, 'IPv4' => $ipv4Time]);
-
             // Choose the IP address with the fastest connection time
             if ($ipv6Time !== false && ($ipv4Time === false || $ipv6Time < $ipv4Time)) {
                 return $ipv6;
-            } elseif ($ipv4Time !== false) {
+            }
+
+            if ($ipv4Time !== false) {
                 return $ipv4;
             }
 
@@ -580,7 +581,7 @@
         {
             // Validate the IP address
             if (!filter_var($ip, FILTER_VALIDATE_IP)) {
-                $this->logger->warning("Invalid IP address: {$ip}");
+                $this->logger->warning('Invalid IP address: ' . $ip);
                 return false;
             }
 
@@ -597,7 +598,7 @@
             }
 
             // Log the connection failure with details
-            $this->logger->warning("Failed to connect to IP {$ip} on port {$port}. Error: {$errstr} ({$errno})");
+            $this->logger->warning(sprintf('Failed to connect to IP %s on port %d. Error: %s (%d)', $ip, $port, $errstr, $errno));
 
             // Return false if the connection failed
             return false;
