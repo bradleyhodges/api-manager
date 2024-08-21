@@ -99,7 +99,7 @@
          * @example
          * $http = new HTTP(['base_uri' => 'https://example.com'], $dnsCache, $logger);
          */
-        public function __construct(array $config, CacheInterface $dnsCache = null, Logger $logger = null)
+        public function __construct(array $config = [], CacheInterface $dnsCache = null, Logger $logger = null)
         {
             // Initialize DNS caching with a fallback to a file-based cache
             $this->dnsCache = $dnsCache ?? new Psr16Cache(new FilesystemAdapter());

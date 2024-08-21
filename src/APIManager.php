@@ -454,7 +454,7 @@ declare(strict_types=1);
          * $response = $http->request('GET', 'test');
          * $cookies = $http->cookieJar();
          */
-        public function useHTTP(array $config): HTTP
+        public function useHTTP(array $config = []): HTTP
         {
             // Instantiate the HTTP class with the provided config
             return new HTTP($config);
