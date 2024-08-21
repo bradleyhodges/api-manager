@@ -4,6 +4,7 @@
     use APIManager\ApiResponseManager;
     use APIManager\ErrorLogger;
     use Throwable;
+    use RuntimeException;
     
     /**
      * CORS class to manage Cross-Origin Resource Sharing (CORS) in a secure and RFC-compliant manner.
@@ -54,7 +55,7 @@
          * @param array $exposedHeaders The headers that are safe to expose to the client (e.g., ['X-Custom-Header']).
          * @param int $maxAge The time in seconds that the results of a preflight request can be cached (default: 86400).
          * @throws Exception If an unsupported HTTP method is requested during preflight OPTIONS checks.
-         * @throws RuntimeException If headers have already been sent before calling this function.
+         * @throws \RuntimeException If headers have already been sent before calling this function.
          */
         public function handleCORS(
             ?array $allowedOrigins = null,
@@ -107,7 +108,7 @@
          * Checks if headers have already been sent and if the required headers are present.
          *
          * @return bool True if the headers are present and not sent; false otherwise.
-         * @throws RuntimeException If headers have already been sent.
+         * @throws \RuntimeException If headers have already been sent.
          */
         private function checkHeaders(): bool
         {
@@ -117,7 +118,7 @@
                 $this->logError("Headers already sent, cannot set CORS headers.");
 
                 // Throw a runtime exception to indicate that headers have already been sent
-                throw new RuntimeException("Headers already sent, cannot set CORS headers.");
+                throw new \RuntimeException("Headers already sent, cannot set CORS headers.");
             }
 
             // Check if the required headers are present

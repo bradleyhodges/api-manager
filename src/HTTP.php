@@ -16,6 +16,7 @@
     use Symfony\Component\Cache\Psr16Cache;
     use Monolog\Logger;
     use Monolog\Handler\StreamHandler;
+    use RuntimeException;
 
     /**
      * Class HTTP
@@ -165,7 +166,7 @@
          * @return ResponseInterface The HTTP response.
          * 
          * @throws GuzzleException If the request fails.
-         * @throws RuntimeException If both IPv6 and IPv4 connection attempts fail or other unexpected issues occur.
+         * @throws \RuntimeException If both IPv6 and IPv4 connection attempts fail or other unexpected issues occur.
          *
          * @example
          * $response = $http->request('GET', '/example-endpoint');
@@ -198,7 +199,7 @@
                 return $response;
             } catch (GuzzleException $guzzleException) {
                 $this->logger->error('Request failed: ' . $guzzleException->getMessage(), ['exception' => $guzzleException]);
-                throw new RuntimeException('Request failed', 0, $guzzleException);
+                throw new \RuntimeException('Request failed', 0, $guzzleException);
             }
         }
 
@@ -528,13 +529,13 @@
          * @param int $timeout The maximum time to wait for each connection attempt (in seconds).
          * @return string The IP address (either IPv6 or IPv4) with the fastest connection time.
          * 
-         * @throws RuntimeException If both connection attempts fail.
+         * @throws \RuntimeException If both connection attempts fail.
          * 
          * @example
          * $fastestIp = $this->connectToFastestIP('::1', '127.0.0.1', 443, 3);
          * try {
          *     $fastestIp = $this->connectToFastestIP('::1', '127.0.0.1');
-         * } catch (RuntimeException $e) {
+         * } catch (\RuntimeException $e) {
          *     echo "Failed to connect to both IPv6 and IPv4: " . $e->getMessage();
          * }
          */
@@ -559,7 +560,7 @@
 
             // If both connections fail, throw an exception with details
             $this->logger->error("Failed to connect to both IPv6 and IPv4 addresses.");
-            throw new RuntimeException("Failed to connect to both IPv6 and IPv4 addresses.");
+            throw new \RuntimeException("Failed to connect to both IPv6 and IPv4 addresses.");
         }
 
         /**

@@ -149,7 +149,7 @@ declare(strict_types=1);
          *
          * @return bool True if a .env file was found and loaded, false otherwise.
          *
-         * @throws RuntimeException If the .env file is found but fails to load.
+         * @throws \RuntimeException If the .env file is found but fails to load.
          */
         private function findAndLoadDotenv(): bool
         {
@@ -331,7 +331,7 @@ declare(strict_types=1);
         public function checkRateLimit(string $id): RateLimit
         {
             if (!$this->rateLimiterFactory instanceof RateLimiterFactory) {
-                throw new RuntimeException('RateLimiter has not been initialized.');
+                throw new \RuntimeException('RateLimiter has not been initialized.');
             }
     
             $limiter = $this->rateLimiterFactory->create($id);
@@ -346,7 +346,7 @@ declare(strict_types=1);
         public function resetRateLimit(string $id): self
         {
             if (!$this->rateLimiterFactory instanceof RateLimiterFactory) {
-                throw new RuntimeException('RateLimiter has not been initialized.');
+                throw new \RuntimeException('RateLimiter has not been initialized.');
             }
     
             $limiter = $this->rateLimiterFactory->create($id);
@@ -588,7 +588,7 @@ declare(strict_types=1);
          * @return string|null Returns the sanitized and processed string, or null if the string is empty after sanitization.
          * 
          * @throws InvalidArgumentException if $maxLength is not null and not a positive integer.
-         * @throws RuntimeException if the mbstring extension is required but not available.
+         * @throws \RuntimeException if the mbstring extension is required but not available.
          * @throws InvalidArgumentException if the input data is not valid UTF-8 or exceeds the allowed maximum length.
          *
          * @example
@@ -622,7 +622,7 @@ declare(strict_types=1);
 
             // Check if mbstring extension is available if multi-byte safe truncation is needed
             if ($maxLength !== null && !function_exists('mb_substr')) {
-                throw new RuntimeException('The mbstring extension is required for safe truncation but is not enabled.');
+                throw new \RuntimeException('The mbstring extension is required for safe truncation but is not enabled.');
             }
 
             // Sanitize and trim the input data
@@ -669,7 +669,7 @@ declare(strict_types=1);
         *                         the document root, or provide an absolute path.
         * @param bool $force Allow the require operation to proceed even if outside of the document root 
         *                    (only works if ENFORCE_SAFE_REQUIRES is not enabled).
-        * @throws RuntimeException If the file is outside of the document root and ENFORCE_SAFE_REQUIRES is enabled, 
+        * @throws \RuntimeException If the file is outside of the document root and ENFORCE_SAFE_REQUIRES is enabled, 
         *                          or if the file does not exist.
         */
        public function requireFile(string $filePath, bool $force = false): void
@@ -684,7 +684,7 @@ declare(strict_types=1);
         *                         the document root, or provide an absolute path.
         * @param bool $force Allow the require_once operation to proceed even if outside of the document root 
         *                    (only works if ENFORCE_SAFE_REQUIRES is not enabled).
-        * @throws RuntimeException If the file is outside of the document root and ENFORCE_SAFE_REQUIRES is enabled, 
+        * @throws \RuntimeException If the file is outside of the document root and ENFORCE_SAFE_REQUIRES is enabled, 
         *                          or if the file does not exist.
         */
        public function requireOnceFile(string $filePath, bool $force = false): void
@@ -703,7 +703,7 @@ declare(strict_types=1);
         * @param string $filePath The path to the file.
         * @param bool $force Whether to force the operation if outside of the document root.
         * @param bool $requireOnce Whether to use require_once or require.
-        * @throws RuntimeException If the file cannot be safely required.
+        * @throws \RuntimeException If the file cannot be safely required.
         */
        private function handleRequire(string $filePath, bool $force, bool $requireOnce): void
        {
@@ -724,7 +724,7 @@ declare(strict_types=1);
                         'Attempted to require file outside of document root: %s. Denied due to ENFORCE_SAFE_REQUIRES.', 
                         $filePath
                     ));
-                    throw new RuntimeException("Operation denied: requiring files outside of document root.");
+                    throw new \RuntimeException("Operation denied: requiring files outside of document root.");
                 }
    
                 if (!$force) {
@@ -733,7 +733,7 @@ declare(strict_types=1);
                         'Attempted to require file outside of document root without --force: %s. Denied.', 
                         $filePath
                     ));
-                    throw new RuntimeException("Requiring files outside of document root requires --force flag.");
+                    throw new \RuntimeException("Requiring files outside of document root requires --force flag.");
                 }
    
                // Log that the force flag is being used
@@ -742,7 +742,7 @@ declare(strict_types=1);
    
            // Check if the file exists
            if (!file_exists($filePath)) {
-               throw new RuntimeException('File not found: ' . $filePath);
+               throw new \RuntimeException('File not found: ' . $filePath);
            }
    
            // Require or require_once the file
@@ -804,7 +804,7 @@ declare(strict_types=1);
          * 
          * @param string $json The JSON string to decode.
          * @return array The decoded JSON as a PHP array.
-         * @throws RuntimeException If the JSON string is invalid.
+         * @throws \RuntimeException If the JSON string is invalid.
          */
         public function decodeJSON(string $json): array
         {
@@ -813,7 +813,7 @@ declare(strict_types=1);
 
             // Check if the JSON is valid
             if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new RuntimeException("Invalid JSON: " . json_last_error_msg());
+                throw new \RuntimeException("Invalid JSON: " . json_last_error_msg());
             }
             
             // Return the decoded data
@@ -827,13 +827,13 @@ declare(strict_types=1);
          * 
          * @param array $data The data to encode as JSON.
          * @return string The encoded JSON string.
-         * @throws RuntimeException If the data cannot be encoded as JSON.
+         * @throws \RuntimeException If the data cannot be encoded as JSON.
          */
         public function encodeJson(array $data): string
         {
             $json = json_encode($data);
             if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new RuntimeException("Failed to encode JSON: " . json_last_error_msg());
+                throw new \RuntimeException("Failed to encode JSON: " . json_last_error_msg());
             }
             
             return $json;
@@ -867,7 +867,7 @@ declare(strict_types=1);
          * @param bool $requirePayload Whether to require a non-empty JSON payload.
          * 
          * @return array The decoded JSON payload.
-         * @throws RuntimeException If the JSON payload is invalid or empty.
+         * @throws \RuntimeException If the JSON payload is invalid or empty.
          */
         public function getJSONPayload(bool $requirePayload = false): array
         {
@@ -877,7 +877,7 @@ declare(strict_types=1);
             // Check if the JSON payload is empty
             if ($json === '' || $json === '0' || $json === false) {
                 if ($requirePayload) {
-                    throw new RuntimeException("Request payload is empty.");
+                    throw new \RuntimeException("Request payload is empty.");
                 }
                 
                 return [];
