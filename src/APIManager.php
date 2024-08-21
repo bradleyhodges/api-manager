@@ -19,6 +19,7 @@ declare(strict_types=1);
     use APIManager\CORS;
     use APIManager\ApiResponseManager;
     use APIManager\ErrorLogger;
+    use APIManager\HTTP;
     use Symfony\Component\RateLimiter\RateLimiterFactory;
     use Symfony\Component\RateLimiter\Policy\SlidingWindowLimiter;
     use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
@@ -439,6 +440,25 @@ declare(strict_types=1);
         }
 
         /**
+         * Creates and returns an HTTP instance with the provided configuration.
+         *
+         * @param array $config Configuration options such as 'base_uri', 'headers', etc.
+         * @return HTTP An instance of the HTTP class
+         * @throws InvalidArgumentException If the configuration is invalid
+         * 
+         * @example
+         * $apiManager = new APIManager();
+         * $http = $apiManager->useHTTP(['base_uri' => 'https://foo.com/api/', 'headers' => [...]]); 
+         * $response = $http->request('GET', 'test');
+         * $cookies = $http->cookieJar();
+         */
+        public function useHTTP(array $config): HTTP
+        {
+            // Instantiate the HTTP class with the provided config
+            return new HTTP($config);
+        }
+
+        /**
          * Adds a log message, similar to PHP's error_log function.
          *
          * @param string|array|Throwable $logData Log data, either as a string message, an array with level and message, or an exception.
@@ -536,7 +556,7 @@ declare(strict_types=1);
         public function handleException(Throwable $throwable): void
         {
             // Log the exception
-            $context = [
+            [
                 'method' => $_SERVER['REQUEST_METHOD'] ?? 'CLI',
                 'uri' => $_SERVER['REQUEST_URI'] ?? 'N/A',
                 'file' => $throwable->getFile(),
@@ -544,7 +564,7 @@ declare(strict_types=1);
             ];
 
             // Log the exception message and context
-            $this->errorLogger->logCritical($throwable, $context);
+            $this->errorLogger->logCritical($throwable);
 
             // Use the response manager to send a 500 response with a JSON error message
             $this->apiResponseManager->addError(['status' => '500', 'title' => 'Internal Server Error', 'detail' => 'An unexpected error occurred']);
@@ -850,6 +870,7 @@ declare(strict_types=1);
                 if ($requirePayload) {
                     throw new RuntimeException("Request payload is empty.");
                 }
+                
                 return [];
             }
             

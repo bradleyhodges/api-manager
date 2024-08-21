@@ -126,6 +126,7 @@
                 $this->apiResponseManager->addMessage('CORS headers were not set as the HTTP_ORIGIN and/or HTTP_REQUEST_METHOD headers were not present with the request');
                 return false;
             }
+
             // Return true if the required headers are present
             return true;
         }

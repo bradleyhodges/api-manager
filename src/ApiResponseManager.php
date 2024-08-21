@@ -19,6 +19,7 @@
     class ApiResponseManager
     {
         public $cors;
+
         /**
          * Array to store global messages.
          * @var array<string>

@@ -43,7 +43,7 @@
                 $this->logger->pushHandler($streamHandler);
             } catch (Exception $exception) {
                 // If there's an issue with the log file (e.g., permission issues), fallback to PHP's error_log
-                error_log(sprintf('Failed to open log file %s for writing. Falling back to PHP\'s error_log. Exception: ', $logFile) . $exception->getMessage());
+                error_log(sprintf("Failed to open log file %s for writing. Falling back to PHP's error_log. Exception: ", $logFile) . $exception->getMessage());
 
                 // Use a WhatFailureGroupHandler to fallback to PHP's error_log
                 $this->logger->pushHandler(new StreamHandler('php://stderr', Logger::ERROR));
