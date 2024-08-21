@@ -194,11 +194,7 @@
 
                 // Send the request and return the response
                 $response = $this->client->request($method, $uri, $options);
-
-                // Log request and response details
-                $this->logger->info(sprintf('Sent %s request to %s', $method, $uri), $options);
-                $this->logger->info("Received response with status code: " . $response->getStatusCode());
-
+                
                 return $response;
             } catch (GuzzleException $guzzleException) {
                 $this->logger->error('Request failed: ' . $guzzleException->getMessage(), ['exception' => $guzzleException]);
