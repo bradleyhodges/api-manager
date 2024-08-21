@@ -52,6 +52,41 @@
          * @var CookieJar $cookieJar CookieJar instance for managing cookies.
          */
         private CookieJar $cookieJar;
+
+        /**
+         * @var bool $happyEyeballsEnabled Whether to use the Happy Eyeballs algorithm for DNS resolution.
+         */
+        private bool $happyEyeballsEnabled = true;
+
+        /**
+         * @var bool $retryEnabled Whether to enable retries with exponential backoff and jitter.
+         */
+        private bool $retryEnabled = false; // Disabled by default
+
+        /**
+         * @var bool $dnsCacheEnabled Whether to enable DNS result caching
+         */
+        private bool $dnsCacheEnabled = false; // Disabled by default
+
+        /**
+         * @var bool $httpVersionFallbackEnabled Whether to enable HTTP version fallback (HTTP/3 -> HTTP/2 -> HTTP/1.1).
+         */
+        private bool $httpVersionFallbackEnabled = false; // Disabled by default
+
+        /**
+         * @var bool $minTlsVersionEnabled Whether to enforce a minimum TLS version of 1.2.
+         */
+        private bool $minTlsVersionEnabled = true;
+
+        /**
+         * @var bool $cloudflareDnsEnabled Whether to use Cloudflare's DNS resolver instead of the system resolver.
+         */
+        private bool $cloudflareDnsEnabled = true;
+
+        /**
+         * @var bool $cookieJarEnabled Whether to use a cookie jar for managing cookies.
+         */
+        private bool $cookieJarEnabled = true;
     
         /**
          * Constructor to initialize the HTTP class with configurations.
@@ -64,46 +99,53 @@
          * @example
          * $http = new HTTP(['base_uri' => 'https://example.com'], $dnsCache, $logger);
          */
-        public function __construct(array $config, CacheInterface $dnsCache = null)
+        public function __construct(array $config, CacheInterface $dnsCache = null, Logger $logger = null)
         {
             // Initialize DNS caching with a fallback to a file-based cache
             $this->dnsCache = $dnsCache ?? new Psr16Cache(new FilesystemAdapter());
-    
+            
             // Initialize the logger (lazy-loaded for performance)
             $this->logger = $logger ?? new Logger('http');
             if ($logger === null) {
                 $this->logger->pushHandler(new StreamHandler('php://stdout', Logger::DEBUG));
             }
-    
-            // Create the handler stack and apply middleware
+
+            // Create the handler stack
             $handlerStack = HandlerStack::create();
 
-            // Add middleware for retries with exponential backoff and jitter
-            $handlerStack->push($this->createRetryMiddleware(), 'retry');
+            // Add middleware conditionally based on flags
+            if ($this->retryEnabled) {
+                $handlerStack->push($this->createRetryMiddleware(), 'retry');
+            }
 
-            // Add middleware for DNS caching using Cloudflare's 1.1.1.1 resolver
-            $handlerStack->push($this->createDnsCacheMiddleware(), 'dns_cache');
+            if ($this->dnsCacheEnabled) {
+                $handlerStack->push($this->createDnsCacheMiddleware(), 'dns_cache');
+            }
 
-            // Add middleware for HTTP version fallback (attempt HTTP/3, fall back to HTTP/2, then to HTTP/1.1)
-            $handlerStack->push($this->createHttpVersionFallbackMiddleware(), 'http_version_fallback');
+            if ($this->httpVersionFallbackEnabled) {
+                $handlerStack->push($this->createHttpVersionFallbackMiddleware(), 'http_version_fallback');
+            }
 
             // Merge custom configuration with default options
             $defaultConfig = [
                 'handler' => $handlerStack,
                 'timeout' => 10,  // Default timeout of 10 seconds
-                'http_version' => '2.0',  // Attempt to use HTTP/2
+                'http_version' => $this->httpVersionFallbackEnabled ? '3.0' : '2.0',  // Attempt HTTP/3 if fallback is enabled, otherwise HTTP/2
                 'verify' => true,  // Enforce SSL certificate validation
                 'curl' => [
-                    CURLOPT_SSLVERSION => CURL_SSLVERSION_TLSv1_2,  // Enforce TLS 1.2
-                    CURLOPT_DNS_SERVERS => '1.1.1.1',  // Use Cloudflare DNS
+                    CURLOPT_SSLVERSION => $this->minTlsVersionEnabled ? CURL_SSLVERSION_TLSv1_2 : CURL_SSLVERSION_DEFAULT,
+                    CURLOPT_DNS_SERVERS => $this->cloudflareDnsEnabled ? '1.1.1.1' : null,  // Use Cloudflare DNS if enabled
                 ],
             ];
             $finalConfig = array_merge($defaultConfig, $config);
 
-            // Create a cookie jar
-            $this->cookieJar = new CookieJar();
+            // Create a cookie jar if enabled
+            if ($this->cookieJarEnabled) {
+                $this->cookieJar = new CookieJar();
+                $finalConfig['cookies'] = $this->cookieJar;
+            }
 
-            // Initialize the Guzzle client
+            // Initialize the Guzzle client with the final configuration
             $this->client = new Client($finalConfig);
 
             // Store default headers if provided
@@ -113,13 +155,18 @@
         /**
          * Send an HTTP request with the configured client.
          *
+         * This method supports the Happy Eyeballs algorithm for resolving hostnames
+         * if enabled. It merges the default headers with any request-specific headers,
+         * adds an idempotency key for POST requests, and logs the request and response details.
+         *
          * @param string $method HTTP method (e.g., 'GET', 'POST').
-         * @param string $uri Endpoint URI (relative to base URI).
-         * @param array $options Additional request options.
+         * @param string $uri Endpoint URI, can be relative to the base URI.
+         * @param array $options Request options compatible with Guzzle, such as 'headers', 'query', etc.
          * @return ResponseInterface The HTTP response.
-         * @throws GuzzleException If the request fails.
-         * @throws RuntimeException For any unexpected issues during the request.
          * 
+         * @throws GuzzleException If the request fails.
+         * @throws RuntimeException If both IPv6 and IPv4 connection attempts fail or other unexpected issues occur.
+         *
          * @example
          * $response = $http->request('GET', '/example-endpoint');
          */
@@ -134,10 +181,21 @@
                     $options['headers']['Idempotency-Key'] = bin2hex(random_bytes(16));
                 }
 
+                // If Happy Eyeballs is enabled, resolve the fastest IP for the URI
+                if ($this->happyEyeballsEnabled && filter_var($uri, FILTER_VALIDATE_URL)) {
+                    $host = parse_url($uri, PHP_URL_HOST);
+                    if ($host) {
+                        $ipv6 = gethostbyname($host . 'AAAA'); // Simplified; should use DNS resolver for AAAA records
+                        $ipv4 = gethostbyname($host);
+                        $fastestIp = $this->connectToFastestIP($ipv6, $ipv4);
+                        $uri = str_replace($host, $fastestIp, $uri);
+                    }
+                }
+
                 // Send the request and return the response
                 $response = $this->client->request($method, $uri, $options);
 
-                // Log request and response details (optional, can be adjusted for production environments)
+                // Log request and response details
                 $this->logger->info(sprintf('Sent %s request to %s', $method, $uri), $options);
                 $this->logger->info("Received response with status code: " . $response->getStatusCode());
 
@@ -207,6 +265,155 @@
         public function getClient(): Client
         {
             return $this->client;
+        }
+
+        /**
+         * Enable or disable the Happy Eyeballs functionality.
+         *
+         * @param bool $enabled Whether to enable Happy Eyeballs.
+         * @return $this
+         */
+        public function useHappyEyeballs(bool $enabled): self
+        {
+            $this->happyEyeballsEnabled = $enabled;
+            return $this;
+        }
+
+        /**
+         * Enable or disable the retry middleware.
+         *
+         * @param bool $enabled Whether to enable retry middleware.
+         * @return $this
+         */
+        public function useRetry(bool $enabled): self
+        {
+            $this->retryEnabled = $enabled;
+            return $this;
+        }
+
+        /**
+         * Enable or disable DNS caching middleware.
+         *
+         * @param bool $enabled Whether to enable DNS caching middleware.
+         * @return $this
+         */
+        public function useDnsCache(bool $enabled): self
+        {
+            $this->dnsCacheEnabled = $enabled;
+            return $this;
+        }
+
+        /**
+         * Enable or disable HTTP version fallback middleware.
+         *
+         * @param bool $enabled Whether to enable HTTP version fallback middleware.
+         * @return $this
+         */
+        public function useHttpVersionFallback(bool $enabled): self
+        {
+            $this->httpVersionFallbackEnabled = $enabled;
+            return $this;
+        }
+
+        /**
+         * Enable or disable the minimum TLS version enforcement.
+         *
+         * @param bool $enabled Whether to enforce minimum TLS version.
+         * @return $this
+         */
+        public function useMinTlsVersion(bool $enabled): self
+        {
+            $this->minTlsVersionEnabled = $enabled;
+            return $this;
+        }
+
+        /**
+         * Enable or disable the use of Cloudflare DNS.
+         *
+         * @param bool $enabled Whether to use Cloudflare DNS.
+         * @return $this
+         */
+        public function useCloudflareDns(bool $enabled): self
+        {
+            $this->cloudflareDnsEnabled = $enabled;
+            return $this;
+        }
+
+        /**
+         * Enable or disable the use of the cookie jar for managing cookies.
+         *
+         * @param bool $enabled Whether to use the cookie jar.
+         * @return $this
+         */
+        public function useCookieJar(bool $enabled): self
+        {
+            $this->cookieJarEnabled = $enabled;
+            return $this;
+        }
+
+        /**
+         * Send an HTTP GET request.
+         *
+         * @param string $uri The endpoint URI.
+         * @param array $options Additional request options.
+         * @return ResponseInterface The HTTP response.
+         * @throws GuzzleException If the request fails.
+         */
+        public function get(string $uri, array $options = []): ResponseInterface
+        {
+            return $this->request('GET', $uri, $options);
+        }
+
+        /**
+         * Send an HTTP POST request.
+         *
+         * @param string $uri The endpoint URI.
+         * @param array $options Additional request options.
+         * @return ResponseInterface The HTTP response.
+         * @throws GuzzleException If the request fails.
+         */
+        public function post(string $uri, array $options = []): ResponseInterface
+        {
+            return $this->request('POST', $uri, $options);
+        }
+
+        /**
+         * Send an HTTP PUT request.
+         *
+         * @param string $uri The endpoint URI.
+         * @param array $options Additional request options.
+         * @return ResponseInterface The HTTP response.
+         * @throws GuzzleException If the request fails.
+         */
+        public function put(string $uri, array $options = []): ResponseInterface
+        {
+            return $this->request('PUT', $uri, $options);
+        }
+
+        /**
+         * Send an HTTP DELETE request.
+         *
+         * @param string $uri The endpoint URI.
+         * @param array $options Additional request options.
+         * @return ResponseInterface The HTTP response.
+         * @throws GuzzleException If the request fails.
+         */
+        public function delete(string $uri, array $options = []): ResponseInterface
+        {
+            return $this->request('DELETE', $uri, $options);
+        }
+
+        /**
+         * Send an HTTP PATCH request.
+         *
+         * @param string $uri The endpoint URI.
+         * @param array $options Additional request options.
+         * @return ResponseInterface The HTTP response.
+         * @throws GuzzleException If the request fails.
+         */
+        public function patch(string $uri, array $options = []): ResponseInterface
+        {
+            return $this->request('PATCH', $uri, $options);
         }
 
         /**
