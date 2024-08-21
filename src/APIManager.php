@@ -70,9 +70,9 @@ declare(strict_types=1);
         private ?RateLimiterFactory $rateLimiterFactory = null;
         
         /**
-         * @var InMemoryStorage $storage In-memory storage for rate limiting (replace with a persistent storage in production).
+         * @var InMemoryStorage $inMemoryStorage In-memory storage for rate limiting (replace with persistent storage in production).
          */
-        private $inMemoryStorage;
+        private InMemoryStorage $inMemoryStorage;
 
         /**
          * @var array $securityHeaders Default security headers to be applied to responses.
@@ -125,8 +125,8 @@ declare(strict_types=1);
         }
 
         /**
-         * Loads environment variables using .env file if DOCUMENT_ROOT_PATH is not already set.
-         * If no .env file is found, uses default environment variables.
+         * Loads environment variables using the .env file if DOCUMENT_ROOT_PATH is not already set.
+         * If no .env file is found, it uses default environment variables.
          */
         private function loadEnvironmentVariables(): void
         {
@@ -146,8 +146,10 @@ declare(strict_types=1);
         /**
          * Finds the .env file by recursively searching up to the DOCUMENT_ROOT_PATH or /var/www/.
          * Caches the result to avoid repeated searches. If found, loads the .env file with safeLoad().
-         * 
+         *
          * @return bool True if a .env file was found and loaded, false otherwise.
+         *
+         * @throws RuntimeException If the .env file is found but fails to load.
          */
         private function findAndLoadDotenv(): bool
         {
@@ -517,29 +519,31 @@ declare(strict_types=1);
         public function handleError(int $errno, string $errstr, string $errfile, int $errline): void
         {
             // Determine the log level based on the error type
-            $logLevel = Logger::ERROR;  // Use Monolog's Logger constants
-        
+            $logLevel = Logger::ERROR;  // Default to ERROR
+            
             if (in_array($errno, [E_WARNING, E_USER_WARNING])) {
                 $logLevel = Logger::WARNING;
             } elseif (in_array($errno, [E_NOTICE, E_USER_NOTICE, E_DEPRECATED, E_USER_DEPRECATED])) {
                 $logLevel = Logger::NOTICE;
+            } elseif (in_array($errno, [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+                $logLevel = Logger::CRITICAL;  // Handle fatal errors with CRITICAL level
             }
-        
+
             // Prepare the context with file and line information
             $context = [
                 'file' => $errfile,
                 'line' => $errline,
                 'errno' => $errno,
             ];
-        
+
             // Log the error with the message and context
             $this->errorLogger->logError(
-                $errstr,  // The error message
-                $context  // Additional context including file, line, and errno
+                $errstr,
+                $context
             );
-            
-            // Throw an exception for errors with log level of ERROR
-            if ($errno === E_ERROR) {
+
+            // Throw an exception for critical errors
+            if (in_array($errno, [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
                 throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
             }
         }
@@ -710,25 +714,31 @@ declare(strict_types=1);
            $documentRoot = rtrim(realpath($documentRoot), '/') . '/';
    
            // Resolve the file path
-           $filePath = strpos($filePath, '@/') === 0 ? $documentRoot . ltrim(substr($filePath, 2), '/') : realpath($filePath);
+           $filePath = strpos($filePath, '@/') === 0 ? realpath($documentRoot . ltrim(substr($filePath, 2), '/')) : realpath($filePath);
    
            // Security check: ensure the file is within the document root
            if ($filePath === false || strpos($filePath, $documentRoot) !== 0) {
-               if ($safeRequires) {
-                   // Log the attempt and deny the operation if ENFORCE_SAFE_REQUIRES is enabled
-                   $this->errorLogger->warning(sprintf('Attempted to require file outside of document root: %s. Operation denied due to ENFORCE_SAFE_REQUIRES.', $filePath));
-                   throw new RuntimeException("Requiring files outside of the document root is not allowed with ENFORCE_SAFE_REQUIRES enabled.");
-               }
+                if ($safeRequires) {
+                    // Deny operation and log with warning
+                    $this->errorLogger->warning(sprintf(
+                        'Attempted to require file outside of document root: %s. Denied due to ENFORCE_SAFE_REQUIRES.', 
+                        $filePath
+                    ));
+                    throw new RuntimeException("Operation denied: requiring files outside of document root.");
+                }
    
-               if (!$force) {
-                   // Log the attempt and deny the operation if the force flag is not set
-                   $this->errorLogger->warning(sprintf('Attempted to require file outside of document root without --force: %s. Operation denied.', $filePath));
-                   throw new RuntimeException("Requiring files outside of the document root requires the --force flag.");
-               }
+                if (!$force) {
+                    // Deny if --force flag not used
+                    $this->errorLogger->warning(sprintf(
+                        'Attempted to require file outside of document root without --force: %s. Denied.', 
+                        $filePath
+                    ));
+                    throw new RuntimeException("Requiring files outside of document root requires --force flag.");
+                }
    
                // Log that the force flag is being used
                $this->errorLogger->info('Requiring file outside of document root with --force: ' . $filePath);
-           }
+            }
    
            // Check if the file exists
            if (!file_exists($filePath)) {
@@ -756,7 +766,7 @@ declare(strict_types=1);
         }
 
         /**
-         * Converts a human-readable interval (e.g., "1 minute") to a DateInterval.
+         * Converts a human-readable interval (e.g., "1 minute", "2 hours") to a DateInterval.
          *
          * @param string $interval The interval in a human-readable format.
          * @return DateInterval The interval as a DateInterval object.
@@ -764,24 +774,23 @@ declare(strict_types=1);
          */
         private function convertToDateInterval(string $interval): DateInterval
         {
-            // Define supported conversions
-            $conversions = [
-                'minute' => 'PT1M',
-                'hour' => 'PT1H',
-                'day' => 'P1D',
-                'week' => 'P1W',
-                'month' => 'P1M',
-                'year' => 'P1Y',
-            ];
-
-            // Extract the number and unit from the interval
+            // Convert the interval using supported units
             if (preg_match('/^(\d+)\s*(minute|hour|day|week|month|year)s?$/i', $interval, $matches)) {
                 $quantity = (int)$matches[1];
                 $unit = strtolower($matches[2]);
 
-                // Convert to the corresponding ISO 8601 format
-                if (isset($conversions[$unit])) {
-                    return new DateInterval(str_replace('1', (string)$quantity, $conversions[$unit]));
+                // Supported conversions
+                $unitMap = [
+                    'minute' => 'PT%sM',
+                    'hour' => 'PT%sH',
+                    'day' => 'P%sD',
+                    'week' => 'P%sW',
+                    'month' => 'P%sM',
+                    'year' => 'P%sY',
+                ];
+
+                if (isset($unitMap[$unit])) {
+                    return new DateInterval(sprintf($unitMap[$unit], $quantity));
                 }
             }
 

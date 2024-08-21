@@ -1,6 +1,7 @@
 <?php
     namespace APIManager;
 
+    use InvalidArgumentException;
     use Exception;
     use GuzzleHttp\Exception\GuzzleException;
     use GuzzleHttp\Client;
@@ -22,11 +23,34 @@
      */
     class HTTP
     {
+        /**
+         * @var Client $client The Guzzle HTTP client instance.
+         */
         private Client $client;
+        
+        /**
+         * @var CacheInterface $dnsCache DNS cache interface for resolving hostnames to IP addresses.
+         */
         private CacheInterface $dnsCache;
+        
+        /**
+         * @var Logger $logger PSR-3 logger instance for logging requests and responses.
+         */
         private Logger $logger;
+        
+        /**
+         * @var array $headers Default headers to be used on all requests.
+         */
         private array $headers = [];
+        
+        /**
+         * @var array $options Additional request options.
+         */
         private array $options = [];
+        
+        /**
+         * @var CookieJar $cookieJar CookieJar instance for managing cookies.
+         */
         private CookieJar $cookieJar;
     
         /**
@@ -35,8 +59,8 @@
          * @param array $config Configuration options such as 'base_uri', 'headers', etc.
          * @param CacheInterface|null $dnsCache DNS cache interface, defaults to a filesystem cache if null.
          * @param Logger|null $logger PSR-3 logger instance, defaults to lazy-loaded Monolog logger.
-         * @throws \InvalidArgumentException If configuration is invalid.
-         * 
+         * @throws InvalidArgumentException If configuration is invalid.
+         *
          * @example
          * $http = new HTTP(['base_uri' => 'https://example.com'], $dnsCache, $logger);
          */
@@ -114,13 +138,13 @@
                 $response = $this->client->request($method, $uri, $options);
 
                 // Log request and response details (optional, can be adjusted for production environments)
-                $this->logger->info("Sent {$method} request to {$uri}", $options);
+                $this->logger->info(sprintf('Sent %s request to %s', $method, $uri), $options);
                 $this->logger->info("Received response with status code: " . $response->getStatusCode());
 
                 return $response;
-            } catch (GuzzleException $e) {
-                $this->logger->error("Request failed: {$e->getMessage()}", ['exception' => $e]);
-                throw new RuntimeException('Request failed', 0, $e);
+            } catch (GuzzleException $guzzleException) {
+                $this->logger->error('Request failed: ' . $guzzleException->getMessage(), ['exception' => $guzzleException]);
+                throw new RuntimeException('Request failed', 0, $guzzleException);
             }
         }
 
@@ -207,8 +231,8 @@
                         $this->logger->info("Retrying request due to exception or server error", [
                             'retries' => $retries,
                             'request' => (string) $request->getUri(),
-                            'exception' => $exception ? $exception->getMessage() : null,
-                            'response' => $response ? $response->getStatusCode() : null,
+                            'exception' => $exception instanceof Exception ? $exception->getMessage() : null,
+                            'response' => $response instanceof ResponseInterface ? $response->getStatusCode() : null,
                         ]);
                         return $retries < 5;  // Retry up to 5 times
                     }
