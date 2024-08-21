@@ -75,10 +75,13 @@ These features are highly configurable and can be enabled or disabled based on y
 Here's a basic usage example:
 
 ```php
-use APIManager\HTTP;
+use APIManager\APIManager;
+
+// Initialize the APIManager
+$apiManager = new APIManager();
 
 // Initialize the HTTP client
-$http = new HTTP();
+$http = $apiManager->useHTTP();
 
 // Send a GET request
 $response = $http->get('/endpoint');
@@ -92,6 +95,18 @@ $responseReason = $response->getReasonPhrase(); // OK
 
 // More methods and examples at https://docs.guzzlephp.org/en/stable/quickstart.html#using-responses
 // Just replace `$client` with `$http` to use them
+```
+
+If you only need `HTTP`, you can initialise it with shorthand:
+
+```php
+$http = (new APIManager())->useHTTP();
+```
+or, even simpler:
+```php
+use APIManager\HTTP;
+
+$http = new HTTP();
 ```
 
 You can also configure advanced options such as retries, DNS caching, and HTTP version fallback:
