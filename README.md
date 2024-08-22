@@ -262,6 +262,7 @@ echo $apiManager->sanitizeInput('some input');
 ### `HTTP`
 
 - **`request(string $method, string $uri, array $options = [])`**: Send a request to the specified URI, using the given method, with optional configuration. See [Guzzle 7 docs](https://docs.guzzlephp.org/en/stable/quickstart.html) for available configuration and other methods.
+- **`requestAsync(string $method, string $uri, array $options = [], ?LoopInterface $loop = null)`**: The asynchronous version of the request method. This returns a promise and is intended to be run in an event loop. If no loop is provided, a new one is created.
 - **`get(string $uri, array $options = [])`**: Shorthand method for `request('GET', ...);`
 - **`post(string $uri, array $options = [])`**: Shorthand method for `request('POST', ...);`
 - **`put(string $uri, array $options = [])`**: Shorthand method for `request('PUT', ...);`
@@ -279,6 +280,7 @@ echo $apiManager->sanitizeInput('some input');
 - **`useMinTlsVersion(bool $enabled)`**: Enable or disable the enforcement of minimum TLS version 1.2.
 - **`useCloudflareDns(bool $enabled)`**: Enable or disable the use of Cloudflare's DNS resolver.
 - **`useCookieJar(bool $enabled)`**: Enable or disable the use of a CookieJar for managing cookies.
+- **`useDefaultConfig(bool $enabled)`**: Enable or disable the use of the default APIManager\HTTP Guzzle config.
 
 ## License 📄
 
