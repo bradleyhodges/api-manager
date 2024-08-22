@@ -142,6 +142,11 @@
          * The last URI that was requested.
          */
         public string $lastUri = '';
+        
+        /**
+         * An object which may contain cookies from the last request.
+         */
+        public $cookies;
     
         /**
          * Constructor to initialize the HTTP class with configurations.
@@ -1142,45 +1147,19 @@
                         'body' => $encodedBody,
                     ];
                 }
-
-                // Handle other body types
-                if (is_string($body)) {
-                    // If the body is already a string, assume plain text by default
-                    return [
-                        'headers' => [
-                            'Content-Type' => 'text/plain'
-                        ],
-                        'body' => $body,
-                    ];
-                } else {
-                    // Unsupported body type detected, log a warning if logger is available
-                    if (property_exists($this, 'logger') && $this->logger !== null) {
-                        $this->logError("Unsupported body type provided. Skipping content type detection.");
-                    }
-
-                    // Return the body as-is with a plain text Content-Type
-                    return [
-                        'headers' => [
-                            'Content-Type' => 'text/plain'
-                        ],
-                        'body' => $body,
-                    ];
-                }
+                
+                // Return the body as-is with a plain text Content-Type
+                return [
+                    'headers' => [
+                        'Content-Type' => 'text/plain'
+                    ],
+                    'body' => $body,
+                ];
             } catch (JsonException $e) {
-                // Handle JSON-specific encoding errors
-                if (property_exists($this, 'logger') && $this->logger !== null) {
-                    $this->logError('Failed to encode JSON: ' . $e->getMessage());
-                }
-
                 // Return an empty array if JSON encoding fails
                 return [];
             } catch (Exception $e) {
                 // General catch for any other unexpected errors
-                if (property_exists($this, 'logger') && $this->logger !== null) {
-                    $this->logError('Error processing body: ' . $e->getMessage());
-                }
-
-                // Return an empty array if JSON encoding fails
                 return [];
             }
         }
@@ -1278,7 +1257,7 @@
             $headers = array_merge($browserHeaders, $headers);
 
             // Handle cookies
-            if (!isset($options['cookies']) && isset($this->cookies)) {
+            if (!isset($options['cookies']) && (property_exists($this, 'cookies') && $this->cookies !== null)) {
                 $options['cookies'] = $this->cookies;
             }
 
@@ -1316,7 +1295,7 @@
                 case 'DELETE':
                     return $this->delete($uri, $headers, $queryParams, $options);
                 default:
-                    throw new \InvalidArgumentException("Unsupported HTTP method: $method");
+                    throw new InvalidArgumentException('Unsupported HTTP method: ' . $method);
             }
         }
 
