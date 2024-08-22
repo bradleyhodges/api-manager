@@ -137,6 +137,11 @@
          * Whether to evaluate request intention (e.g., detect accidental body data in GET requests).
          */
         private bool $evaluateRequestIntention = true;
+
+        /**
+         * The last URI that was requested.
+         */
+        public string $lastUri = '';
     
         /**
          * Constructor to initialize the HTTP class with configurations.
@@ -261,6 +266,9 @@
 
             // Prepare the request with middleware and configuration
             $this->prepareRequest();
+            
+            // Save the last URI for potential referer use in future requests
+            $this->lastUri = $uri;
 
             // If Happy Eyeballs is not enabled, handle the request synchronously without async logic
             if (!$this->happyEyeballsEnabled) {
@@ -1124,7 +1132,7 @@
                             'body' => $encodedBody,
                         ];
                     }
-                    
+
                     // Handle sequential arrays as x-www-form-urlencoded
                     $encodedBody = http_build_query($body, '', '&', PHP_QUERY_RFC3986);
                     return [
@@ -1212,6 +1220,104 @@
         private function isAssociativeArray(array $array): bool
         {
             return array_keys($array) !== range(0, count($array) - 1);
+        }
+
+        /**
+         * Impersonate a browser and send an HTTP request with browser-like headers.
+         *
+         * This method sends an HTTP request to the specified URI, mimicking the behavior
+         * of Chrome on a Windows PC. It sets headers and options to closely resemble what
+         * a browser would send, including user-agent, accept, and language headers. It
+         * handles cookies, sessions, and redirects similar to a browser.
+         *
+         * Supported methods include GET, POST, PUT, PATCH, and DELETE.
+         *
+         * @param string $method The HTTP method to use (e.g., 'GET', 'POST', 'PUT', 'PATCH', 'DELETE').
+         * @param string $uri The endpoint URI.
+         * @param mixed $body The request body, applicable for methods like POST, PUT, and PATCH.
+         * @param array<string, string> $headers Additional request headers (default: empty).
+         * @param array<string, mixed> $queryParams Additional query parameters (default: empty).
+         * @param array<string, mixed> $options Additional request options that override defaults (default: empty).
+         * 
+         * @return ResponseInterface The HTTP response.
+         * 
+         * @throws GuzzleException If the request fails.
+         * @throws InvalidArgumentException If an unsupported HTTP method is provided.
+         * 
+         * @example
+         * $response = $this->impersonateBrowser('GET', 'https://example.com');
+         */
+        public function impersonateBrowser(
+            string $method,
+            string $uri,
+            mixed $body = null,
+            array $headers = [],
+            array $queryParams = [],
+            array $options = []
+        ): ResponseInterface {
+            // Common headers for browser impersonation
+            $browserHeaders = [
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36',
+                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                'Accept-Encoding' => 'gzip, deflate, br, zstd',
+                'Accept-Language' => 'en-US,en;q=0.9',
+                'Cache-Control' => 'no-cache',
+                'Pragma' => 'no-cache',
+                'Upgrade-Insecure-Requests' => '1',
+                'DNT' => '1',
+                'Sec-CH-UA' => '"Not)A;Brand";v="99", "Google Chrome";v="127", "Chromium";v="127"',
+                'Sec-CH-UA-Mobile' => '?0',
+                'Sec-CH-UA-Platform' => '"Windows"',
+                'Sec-Fetch-Dest' => 'document',
+                'Sec-Fetch-Mode' => 'navigate',
+                'Sec-Fetch-Site' => 'same-origin',
+                'Sec-Fetch-User' => '?1',
+            ];
+
+            // Merge the provided headers with the browser impersonation headers
+            $headers = array_merge($browserHeaders, $headers);
+
+            // Handle cookies
+            if (!isset($options['cookies']) && isset($this->cookies)) {
+                $options['cookies'] = $this->cookies;
+            }
+
+            // Handle referer (if available from previous requests)
+            if (isset($this->lastUri)) {
+                $headers['Referer'] = $this->lastUri;
+            }
+
+            // Enable redirect handling similar to a browser
+            $options['allow_redirects'] = $options['allow_redirects'] ?? [
+                'max' => 10,  // Maximum number of redirects to follow
+                'strict' => true,  // Follow strict RFC 7231 redirects
+                'referer' => true,  // Add referer header when following redirects
+                'protocols' => ['http', 'https'],
+                'track_redirects' => true,
+            ];
+
+            // Set timeout and maximum response size to avoid abuse
+            $options['timeout'] = $options['timeout'] ?? 30;  // Set a reasonable timeout
+            $options['max_response_size'] = $options['max_response_size'] ?? 1024 * 1024 * 5; // 5MB limit
+
+            // Save the last URI for potential referer use in future requests
+            $this->lastUri = $uri;
+
+            // Handle request methods
+            switch (strtoupper($method)) {
+                case 'GET':
+                    return $this->get($uri, $headers, $queryParams, $options);
+                case 'POST':
+                    return $this->post($uri, $body, $headers, $queryParams, $options);
+                case 'PUT':
+                    return $this->put($uri, $body, $headers, $queryParams, $options);
+                case 'PATCH':
+                    return $this->patch($uri, $body, $headers, $queryParams, $options);
+                case 'DELETE':
+                    return $this->delete($uri, $headers, $queryParams, $options);
+                default:
+                    throw new \InvalidArgumentException("Unsupported HTTP method: $method");
+            }
         }
 
         /**
