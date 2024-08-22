@@ -1,6 +1,9 @@
 <?php
     namespace APIManager;
 
+    use Throwable;
+    use React\EventLoop\Loop;
+    use function React\Promise\reject;
     use APIManager\ErrorLogger;
     use InvalidArgumentException;
     use Exception;
@@ -38,6 +41,7 @@
      */
     class HTTP
     {
+        public $loop;
         /**
          * @var Client|null $client The Guzzle HTTP client instance.
          */
@@ -71,7 +75,7 @@
         /**
          * @var bool $happyEyeballsEnabled Whether to use the Happy Eyeballs algorithm for DNS resolution.
          */
-        private bool $happyEyeballsEnabled = false;
+        private bool $happyEyeballsEnabled = true;
 
         /**
          * @var bool $retryEnabled Whether to enable retries with exponential backoff and jitter.
@@ -81,7 +85,7 @@
         /**
          * @var bool $dnsCacheEnabled Whether to enable DNS result caching
          */
-        private bool $dnsCacheEnabled = false; // Disabled by default
+        private bool $dnsCacheEnabled = true; // Disabled by default
 
         /**
          * @var bool $httpVersionFallbackEnabled Whether to enable HTTP version fallback (HTTP/3 -> HTTP/2 -> HTTP/1.1).
@@ -114,11 +118,6 @@
         private bool $useDefaultConfig = true;
 
         /**
-         * @var array $happyEyeballsCache Cache for storing IP race data for Happy Eyeballs.
-         */
-        private array $happyEyeballsCache = [];
-
-        /**
          * @var int $cacheExpiration Cache expiration in seconds (e.g., 5 minutes).
          */
         private int $cacheExpiration = 300; // Cache expiration in seconds (e.g., 5 minutes)
@@ -133,13 +132,11 @@
          *
          * @param array $config Configuration options such as 'base_uri', 'headers', etc.
          * @param CacheInterface|null $dnsCache DNS cache interface, defaults to a filesystem cache if null.
-         * @param Logger|null $errorLogger PSR-3 logger instance, defaults to lazy-loaded Monolog logger.
          * @throws InvalidArgumentException If configuration is invalid.
-         *
          * @example
          * $http = new HTTP(['base_uri' => 'https://example.com'], $dnsCache, $errorLogger);
          */
-        public function __construct(array $config = [], CacheInterface $dnsCache = null, Logger $errorLogger = null)
+        public function __construct(array $config = [], CacheInterface $dnsCache = null)
         {
             // Initialize DNS caching with a fallback to a file-based cache
             $this->dnsCache = $dnsCache ?? new Psr16Cache(new FilesystemAdapter());
@@ -201,7 +198,7 @@
             $finalConfig = array_merge($defaultConfig, $this->userSuppliedConfig);
 
             // If the client has not been created or if the configuration has changed, recreate the client
-            if ($this->client === null || $this->stashedConfig !== $finalConfig) {
+            if (!$this->client instanceof Client || $this->stashedConfig !== $finalConfig) {
                 // Create a cookie jar if enabled
                 if ($this->cookieJarEnabled) {
                     $this->cookieJar = new CookieJar();
@@ -226,29 +223,29 @@
          * if enabled. It merges the default headers with any request-specific headers,
          * adds an idempotency key for POST requests, and logs the request and response details.
          *
-         * The method blocks until the asynchronous operation completes, making it 
+         * The method blocks until the asynchronous operation completes, making it
          * appear synchronous to the caller.
          *
          * @param string $method HTTP method (e.g., 'GET', 'POST'). Must be uppercase and conform to RFC 7231.
          * @param string $uri Endpoint URI, which can be relative to the base URI. Must be validated to avoid SSRF attacks.
          * @param array $options Request options compatible with Guzzle, such as 'headers', 'query', etc.
          * @return ResponseInterface The HTTP response.
-         * 
+         *
          * @throws GuzzleException If the request fails.
-         * @throws \RuntimeException If both IPv6 and IPv4 connection attempts fail, or other unexpected issues occur.
-         * @throws \InvalidArgumentException If input parameters are invalid.
+         * @throws RuntimeException If both IPv6 and IPv4 connection attempts fail, or other unexpected issues occur.
+         * @throws InvalidArgumentException If input parameters are invalid.
          */
         public function request(string $method, string $uri, array $options = []): ResponseInterface
         {
             // Validate HTTP method
             $validMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'];
             if (!in_array(strtoupper($method), $validMethods, true)) {
-                throw new \InvalidArgumentException("Invalid HTTP method: $method");
+                throw new InvalidArgumentException('Invalid HTTP method: ' . $method);
             }
     
             // Validate the URI to mitigate SSRF (Server-Side Request Forgery) risks
-            if (!filter_var($uri, FILTER_VALIDATE_URL) && !preg_match('/^\/[\w\-\/]+$/', $uri)) {
-                throw new \InvalidArgumentException("Invalid URI: $uri");
+            if (!filter_var($uri, FILTER_VALIDATE_URL) && (preg_match('/^\/[\w\-\/]+$/', $uri) === 0 || preg_match('/^\/[\w\-\/]+$/', $uri) === false)) {
+                throw new InvalidArgumentException('Invalid URI: ' . $uri);
             }
 
             // Prepare the request with middleware and configuration
@@ -260,7 +257,7 @@
             }
 
             // Happy Eyeballs is enabled, proceed with async logic
-            $loop = Factory::create();
+            $loop = LoopFactory::create();
 
             // Define a variable to hold the response or error
             $response = null;
@@ -269,16 +266,16 @@
             // Initiate the async request and handle the response or error
             $this->requestAsync($method, $uri, $options, $loop)
                 ->then(
-                    function ($res) use (&$response) {
+                    function ($res) use (&$response): void {
                         // Store the response for later retrieval
                         $response = $res;
                     },
-                    function ($err) use (&$error) {
+                    function ($err) use (&$error): void {
                         // Store the error for later retrieval
                         $error = $err;
                     }
                 )
-                ->always(function () use ($loop) {
+                ->always(function () use ($loop): void {
                     // Stop the event loop after the request completes
                     $loop->stop();
                 });
@@ -287,7 +284,7 @@
             $loop->run();
 
             // Check for an error after the loop has stopped
-            if ($error !== null) {
+            if ($error instanceof Throwable) {
                 // Log the error message
                 $this->logError("Error in request: " . $error->getMessage());
 
@@ -297,7 +294,7 @@
 
             // Ensure the response is set
             if ($response === null) {
-                throw new \RuntimeException("Unexpected error: No response or error received during the request.");
+                throw new RuntimeException("Unexpected error: No response or error received during the request.");
             }
 
             return $response;
@@ -316,11 +313,8 @@
          */
         public function requestAsync(string $method, string $uri, array $options = [], ?LoopInterface $loop = null): PromiseInterface
         {
-            // Create a loop if none is provided
-            // if ($loop === null) {
-            //     $loop = \React\EventLoop\Factory::create();
-            // }
-            $loop = $loop ?? $this->loop ?? ($this->loop = \React\EventLoop\Factory::create());
+            // Use the provided loop or create a new one if not provided
+            $loop = $loop ?? $this->loop ?? ($this->loop = LoopFactory::create());
 
             // Merge default headers with request-specific headers
             $options['headers'] = array_merge($this->headers, $options['headers'] ?? []);
@@ -333,24 +327,53 @@
             // Add an explicit timeout to the Guzzle request to avoid hanging indefinitely
             $options['timeout'] = $options['timeout'] ?? 10;  // Set a default timeout if not provided
 
+            // If DNS caching is enabled, check the cache first
+            if ($this->dnsCacheEnabled && filter_var($uri, FILTER_VALIDATE_URL)) {
+                $host = parse_url($uri, PHP_URL_HOST);
+
+                if ($host && $this->dnsCache->has($host)) {
+                    // Retrieve cached IP addresses
+                    $cachedIps = $this->dnsCache->get($host);
+
+                    // If we have a cached IPv4 or IPv6 address, we can skip Happy Eyeballs
+                    if ($cachedIps['ipv4'] || $cachedIps['ipv6']) {
+                        $fastestIp = $cachedIps['ipv6'] ?? $cachedIps['ipv4']; // Use IPv6 if available, fallback to IPv4
+
+                        // Set the CURLOPT_RESOLVE option to use the cached IP
+                        $options['curl'] = [
+                            CURLOPT_RESOLVE => [
+                                sprintf('%s:80:%s', $host, $fastestIp),
+                                sprintf('%s:443:%s', $host, $fastestIp)
+                            ]
+                        ];
+
+                        // Initiate the async Guzzle request with the cached IP
+                        $guzzlePromise = $this->client->requestAsync($method, $uri, $options);
+
+                        // Convert the Guzzle promise to a ReactPHP promise, managing the loop
+                        return $this->convertGuzzlePromiseToReactPromise($guzzlePromise, $loop);
+                    }
+                }
+            }
+
             // If Happy Eyeballs is enabled, resolve the fastest IP for the URI
             if ($this->happyEyeballsEnabled && filter_var($uri, FILTER_VALIDATE_URL)) {
                 // Extract the hostname from the URI
                 $host = parse_url($uri, PHP_URL_HOST);
 
-                // Proceed if the URI contains a valid hostname
                 if ($host) {
                     // Resolve the hostname to IPv6 and IPv4 addresses
                     $resolvedIps = $this->resolveHost($host);
 
+                    // Check if we have resolved IPs for the hostname
                     if ($resolvedIps['ipv4'] || $resolvedIps['ipv6']) {
                         return $this->makeEyeballsHappy($host, $resolvedIps['ipv6'], $resolvedIps['ipv4'])
-                            ->then(function ($fastestIp) use ($host, $uri, $method, $options, $loop) {
+                            ->then(function ($fastestIp) use ($host, $uri, $method, $options, $loop): PromiseInterface {
                                 // Set the CURLOPT_RESOLVE option to use the resolved IP for the given hostname
                                 $options['curl'] = [
                                     CURLOPT_RESOLVE => [
-                                        "$host:80:$fastestIp",
-                                        "$host:443:$fastestIp"
+                                        sprintf('%s:80:%s', $host, $fastestIp),
+                                        sprintf('%s:443:%s', $host, $fastestIp)
                                     ]
                                 ];
                                 
@@ -360,14 +383,15 @@
                                 // Convert the Guzzle promise to a ReactPHP promise, managing the loop
                                 return $this->convertGuzzlePromiseToReactPromise($guzzlePromise, $loop);
                             })
-                            ->otherwise(function (\Throwable $e) use ($host) {
-                                $this->logError("Failed to resolve Happy Eyeballs for host: $host. Error: " . $e->getMessage());
-                                return \React\Promise\reject($e);
+                            ->otherwise(function (Throwable $throwable) use ($host) {
+                                $this->logError(sprintf('Failed to resolve Happy Eyeballs for host: %s. Error: ', $host) . $throwable->getMessage());
+                                return reject($throwable);
                             });
-                    } else {
-                        $this->logError("Failed to resolve any IPs for host: $host");
-                        return \React\Promise\reject(new \RuntimeException("Failed to resolve the host: $host"));
                     }
+
+                    // Log an error if DNS resolution fails
+                    $this->logError('Failed to resolve any IPs for host: ' . $host);
+                    return reject(new RuntimeException('Failed to resolve the host: ' . $host));
                 }
             }
             
@@ -406,13 +430,13 @@
                     $curlOptions = [];
 
                     if ($resolvedAddresses['ipv4'] !== null) {
-                        $curlOptions[] = "{$host}:80:{$resolvedAddresses['ipv4']}";
-                        $curlOptions[] = "{$host}:443:{$resolvedAddresses['ipv4']}"; // Include HTTPS port 443
+                        $curlOptions[] = sprintf('%s:80:%s', $host, $resolvedAddresses['ipv4']);
+                        $curlOptions[] = sprintf('%s:443:%s', $host, $resolvedAddresses['ipv4']); // Include HTTPS port 443
                     }
 
                     if ($resolvedAddresses['ipv6'] !== null) {
-                        $curlOptions[] = "{$host}:80:[{$resolvedAddresses['ipv6']}]";
-                        $curlOptions[] = "{$host}:443:[{$resolvedAddresses['ipv6']}]"; // Include HTTPS port 443
+                        $curlOptions[] = sprintf('%s:80:[%s]', $host, $resolvedAddresses['ipv6']);
+                        $curlOptions[] = sprintf('%s:443:[%s]', $host, $resolvedAddresses['ipv6']); // Include HTTPS port 443
                     }
 
                     // Add the resolved addresses to Guzzle's cURL options
@@ -431,9 +455,9 @@
                 $response = $this->client->request($method, $uri, $options);
 
                 return $response;
-            } catch (RequestException $guzzleException) {
-                $this->logError('Request failed: ' . $guzzleException->getMessage(), ['exception' => $guzzleException]);
-                throw new RuntimeException('Request failed', 0, $guzzleException);
+            } catch (RequestException $requestException) {
+                $this->logError('Request failed: ' . $requestException->getMessage());
+                throw new RuntimeException('Request failed', 0, $requestException);
             }
         }
         
@@ -456,12 +480,7 @@
                 ): bool {
                     // Retry on network failures, 429 (Too Many Requests), or 5xx responses
                     if ($exception instanceof ConnectException || ($response && $response->getStatusCode() >= 500)) {
-                        $this->logError("Retrying request due to exception or server error", [
-                            'retries' => $retries,
-                            'request' => (string) $request->getUri(),
-                            'exception' => $exception instanceof Exception ? $exception->getMessage() : null,
-                            'response' => $response instanceof ResponseInterface ? $response->getStatusCode() : null,
-                        ]);
+                        $this->logError("Retrying request due to exception or server error");
                         return $retries < 5;  // Retry up to 5 times
                     }
 
@@ -481,19 +500,18 @@
          * @param LoopInterface $loop The ReactPHP event loop to run.
          * @return PromiseInterface The converted ReactPHP promise.
          */
-        private function convertGuzzlePromiseToReactPromise(GuzzlePromise $guzzlePromise, LoopInterface $loop): PromiseInterface
+        private function convertGuzzlePromiseToReactPromise(\GuzzleHttp\Promise\PromiseInterface $guzzlePromise, LoopInterface $loop): PromiseInterface
         {
             // Create a deferred promise to handle the Guzzle promise resolution
             $deferred = new Deferred();
 
             // Handle fulfillment and rejection after the promise is waited on
             $guzzlePromise->then(
-                function ($value) use ($deferred) {
-                    // Resolve the deferred promise with the Guzzle promise value
+                function ($value) use ($deferred): void {
                     $deferred->resolve($value);
                 },
-                function ($reason) use ($deferred) {
-                    // Reject the deferred promise with the Guzzle promise reason
+                function ($reason) use ($deferred): void {
+                    // Reject the deferred promise with the rejection reason
                     $deferred->reject($reason);
                 }
             )->wait();  // Wait for the Guzzle promise to resolve or reject
@@ -523,12 +541,20 @@
                     $ip = $this->dnsCache->get($host);
                 } else {
                     // Perform DNS resolution with Happy Eyeballs using Cloudflare's 1.1.1.1 DNS
-                    $ip = $this->resolveWithHappyEyeballs($host);
-                    $this->dnsCache->set($host, $ip, 3600);  // Cache for 1 hour
+                    try {
+                        $ip = $this->resolveUsingCloudflare($host);
+                        $this->dnsCache->set($host, $ip, 3600);  // Cache for 1 hour
+                    } catch (Throwable $e) {
+                        // Log the error and handle the exception gracefully
+                        $this->logError("DNS resolution failed: " . $e->getMessage());
+                        return $request; // Return the original request if DNS resolution fails
+                    }
                 }
 
-                // Replace the host in the request URI with the resolved IP
-                $uri = $request->getUri()->withHost($ip);
+                // Set the resolved IP address in the request's cURL options
+                $uri = $request->getUri()->withHost($host);
+
+                // Return the request with the resolved IP address
                 return $request->withUri($uri);
             });
         }
@@ -560,10 +586,7 @@
                         try {
                             return $handler($request, $options);
                         } catch (Exception $exception) {
-                            $this->logError("HTTP/2 also failed, falling back to HTTP/1.1", [
-                                'exception' => $exception->getMessage(),
-                                'request' => (string) $request->getUri(),
-                            ]);
+                            $this->logError("HTTP/2 also failed, falling back to HTTP/1.1");
 
                             // Fall back to HTTP/1.1 if HTTP/2 also fails
                             $options['http_version'] = '1.1';
@@ -586,20 +609,12 @@
         {
             // Validate and sanitize the host
             if (!filter_var($host, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)) {
-                throw new InvalidArgumentException("Invalid host: $host");
+                throw new InvalidArgumentException('Invalid host: ' . $host);
             }
 
             // Check DNS cache before resolving
             if ($this->dnsCacheEnabled && $this->dnsCache->has($host)) {
-
-                $result = $this->dnsCache->get($host);
-
-                echo "DNS cache hit for $host\n";
-                echo "IPv4: {$result['ipv4']}\n";
-                echo "IPv6: {$result['ipv6']}\n";
-
-                var_dump($result);
-
+                // Return the cache hit if available
                 return $this->dnsCache->get($host);
             }
 
@@ -610,24 +625,15 @@
             ];
 
             try {
-                if ($this->cloudflareDnsEnabled) {
-                    // Use Cloudflare DNS-over-HTTPS resolver
-                    $result = $this->resolveUsingCloudflare($host);
-                } else {
-                    // Use system DNS resolver
-                    $result = $this->resolveUsingSystemDns($host);
-                }
-            } catch (\Throwable $e) {
+                $result = $this->cloudflareDnsEnabled ? $this->resolveUsingCloudflare($host) : $this->resolveUsingSystemDns($host);
+            } catch (Throwable $throwable) {
                 // Log any unexpected errors during resolution
-                $this->logError("DNS resolution failed for host: $host. Error: " . $e->getMessage());
+                $this->logError(sprintf('DNS resolution failed for host: %s. Error: ', $host) . $throwable->getMessage());
             }
 
             // Cache the result if DNS caching is enabled
             if ($this->dnsCacheEnabled && $result) {
-                echo "Caching DNS result for $host\n";
-                echo "IPv4: {$result['ipv4']}\n";
-                echo "IPv6: {$result['ipv6']}\n";
-                
+                // Cache the result with the configured expiration time
                 $this->dnsCache->set($host, $result, $this->cacheExpiration);
             }
 
@@ -722,16 +728,16 @@
                 }
             } catch (RequestException $e) {
                 // Log the error and rethrow it
-                $this->logError("Failed to resolve DNS using Cloudflare for host: $host. Error: " . $e->getMessage());
+                $this->logError(sprintf('Failed to resolve DNS using Cloudflare for host: %s. Error: ', $host) . $e->getMessage());
 
                 // Rethrow the error with a more descriptive message
-                throw new RuntimeException("Cloudflare DNS resolution failed for host: $host", 0, $e);
-            } catch (\Throwable $e) {
+                throw new RuntimeException('Cloudflare DNS resolution failed for host: ' . $host, 0, $e);
+            } catch (Throwable $e) {
                 // Log any other unexpected errors
-                $this->logError("An unexpected error occurred during DNS resolution for host: $host. Error: " . $e->getMessage());
+                $this->logError(sprintf('An unexpected error occurred during DNS resolution for host: %s. Error: ', $host) . $e->getMessage());
                 
                 // Rethrow the error with a more descriptive message
-                throw new RuntimeException("Unexpected error during DNS resolution for host: $host", 0, $e);
+                throw new RuntimeException('Unexpected error during DNS resolution for host: ' . $host, 0, $e);
             }
             
             // Return the resolved IP addresses
@@ -756,7 +762,7 @@
             $ipv6Records = dns_get_record($host, DNS_AAAA);
 
             // Extract the first IPv6 record if available
-            if ($ipv6Records !== false && count($ipv6Records) > 0) {
+            if ($ipv6Records !== false && $ipv6Records !== []) {
                 // Store the first IPv6 record in the result array
                 $result['ipv6'] = $ipv6Records[0]['ipv6'];
             }
@@ -765,7 +771,7 @@
             $ipv4Records = dns_get_record($host, DNS_A);
 
             // Extract the first IPv4 record if available
-            if ($ipv4Records !== false && count($ipv4Records) > 0) {
+            if ($ipv4Records !== false && $ipv4Records !== []) {
                 // Store the first IPv4 record in the result array
                 $result['ipv4'] = $ipv4Records[0]['ip'];
             }
@@ -792,10 +798,10 @@
             // Ensure at least one IP address is provided
             if ($ipv6 === null && $ipv4 === null) {
                 // Log the error
-                $this->logError("No valid IP addresses (IPv6 or IPv4) provided for host: $host.");
+                $this->logError(sprintf('No valid IP addresses (IPv6 or IPv4) provided for host: %s.', $host));
 
                 // Reject the promise with an error
-                return \React\Promise\reject(new \InvalidArgumentException("No valid IP addresses provided for host: $host."));
+                return reject(new InvalidArgumentException(sprintf('No valid IP addresses provided for host: %s.', $host)));
             }
 
             // Deferred promise to resolve when the first connection is established
@@ -805,10 +811,10 @@
             $connectionEstablished = false;
 
             // Create a new event loop or retrieve the current one
-            $loop = \React\EventLoop\Loop::get();
+            $loop = Loop::get();
 
             // Success handler for the connection attempt
-            $onConnectionSuccess = function (string $ip) use (&$connectionEstablished, $deferred, $loop) {
+            $onConnectionSuccess = function (string $ip) use (&$connectionEstablished, $deferred, $loop): void {
                 if (!$connectionEstablished) {
                     $connectionEstablished = true;
                     $deferred->resolve($ip);
@@ -819,10 +825,10 @@
             };
 
             // Failure handler for the connection attempt
-            $onConnectionFailure = function (\Throwable $e) use (&$connectionEstablished, $deferred, $loop) {
+            $onConnectionFailure = function (Throwable $throwable) use (&$connectionEstablished, $deferred, $loop): void {
                 if (!$connectionEstablished) {
                     $connectionEstablished = true;
-                    $deferred->reject($e);
+                    $deferred->reject($throwable);
 
                     // Stop the loop after failure if no connections succeeded
                     $loop->stop();
@@ -840,7 +846,7 @@
                 $delay = $ipv6 !== null ? 0.025 : 0;
 
                 // Schedule the IPv4 connection attempt with a slight delay
-                $loop->addTimer($delay, function () use ($ipv4, $port, $timeout, $onConnectionSuccess, $onConnectionFailure) {
+                $loop->addTimer($delay, function () use ($ipv4, $port, $timeout, $onConnectionSuccess, $onConnectionFailure): void {
                     $this->measureConnectionTime($ipv4, $port, $timeout)
                         ->then($onConnectionSuccess, $onConnectionFailure);
                 });
@@ -868,7 +874,7 @@
             // Validate the IP address
             if (!filter_var($ip, FILTER_VALIDATE_IP)) {
                 // Reject the promise with an error
-                return \React\Promise\reject(new \InvalidArgumentException("Invalid IP address: $ip"));
+                return reject(new InvalidArgumentException('Invalid IP address: ' . $ip));
             }
 
             // Create a new event loop if none is provided
@@ -880,8 +886,8 @@
             $startTime = microtime(true);
 
             // Create a promise to handle the connection attempt
-            return $connector->connect("$ip:$port")->then(
-                function ($connection) use ($ip, $startTime) {
+            return $connector->connect(sprintf('%s:%d', $ip, $port))->then(
+                function ($connection) use ($ip, $startTime): string {
                     // Calculate the connection duration
                     $elapsedTime = microtime(true) - $startTime;
 
@@ -891,9 +897,9 @@
                     // Return the IP address
                     return $ip;
                 },
-                function (\Throwable $error) use ($ip) {
+                function (Throwable $throwable) use ($ip): PromiseInterface {
                     // Reject the promise with the error
-                    return \React\Promise\reject($error);
+                    return reject($throwable);
                 }
             );
         }
@@ -1125,40 +1131,12 @@
          *
          * @param string $message The error message to log.
          */
-        private function logInfo(string $message): void
-        {
-            if ($this->errorLogger instanceof errorLog) {
-                $this->errorLogger->logError("[Information only]: " . $message);
-            } else {
-                error_log("[Information only]: " . $message);
-            }
-        }
-        
-        /**
-         * Logs an error message using the provided logger or error_log as fallback.
-         *
-         * @param string $message The error message to log.
-         */
         private function logError(string $message): void
         {
             if ($this->errorLogger instanceof errorLog) {
                 $this->errorLogger->logError($message);
             } else {
                 error_log($message);
-            }
-        }
-
-        /**
-         * Logs a critical error (typically an exception) using the provided logger or error_log as fallback.
-         *
-         * @param Throwable $throwable The exception to log.
-         */
-        private function logCritical(Throwable $throwable): void
-        {
-            if ($this->errorLogger instanceof errorLog) {
-                $this->errorLogger->logCritical($throwable);
-            } else {
-                error_log($throwable->getMessage() . ' in ' . $throwable->getFile() . ' on line ' . $throwable->getLine());
             }
         }
     }
