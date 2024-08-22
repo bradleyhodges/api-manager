@@ -84,7 +84,7 @@ $apiManager = new APIManager();
 $http = $apiManager->useHTTP();
 
 // Send a GET request
-$response = $http->get('/endpoint');
+$response = $http->get('https://google.com');
 
 // Get the response body
 $body = $response->getBody()->getContents();

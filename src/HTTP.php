@@ -126,6 +126,13 @@
          * @var array|null $stashedConfig The cached configuration used to create the client.
          */
         private ?array $stashedConfig = null;
+
+        /**
+         * Whether to evaluate request intention (e.g., detect accidental body data in GET requests).
+         *
+         * @var bool
+         */
+        private bool $evaluateRequestIntention = true;
     
         /**
          * Constructor to initialize the HTTP class with configurations.
@@ -319,11 +326,6 @@
             // Merge default headers with request-specific headers
             $options['headers'] = array_merge($this->headers, $options['headers'] ?? []);
 
-            // Add idempotency key for POST requests if not already set
-            if ($method === 'POST' && !isset($options['headers']['Idempotency-Key'])) {
-                $options['headers']['Idempotency-Key'] = bin2hex(random_bytes(16));
-            }
-
             // Add an explicit timeout to the Guzzle request to avoid hanging indefinitely
             $options['timeout'] = $options['timeout'] ?? 10;  // Set a default timeout if not provided
 
@@ -445,11 +447,6 @@
 
                 // Merge default headers with request-specific headers
                 $options['headers'] = array_merge($this->headers, $options['headers'] ?? []);
-
-                // Add idempotency key for POST requests if not already set
-                if ($method === 'POST' && !isset($options['headers']['Idempotency-Key'])) {
-                    $options['headers']['Idempotency-Key'] = bin2hex(random_bytes(16));
-                }
 
                 // Send the request and return the response
                 $response = $this->client->request($method, $uri, $options);
@@ -1062,67 +1059,428 @@
         }
 
         /**
+         * Enable or disable evaluation of request intention.
+         *
+         * @param bool $evaluate Whether to evaluate request intentions.
+         */
+        public function useEvaluateRequestIntention(bool $evaluate): self
+        {
+            $this->evaluateRequestIntention = $evaluate;
+            return $this;
+        }
+
+        /**
+         * Detect the content type based on the body data and format it accordingly.
+         *
+         * This method determines the appropriate Content-Type header based on the structure
+         * and contents of the request body. It supports various formats such as `multipart/form-data`,
+         * `application/json`, `application/x-www-form-urlencoded`, and plain text.
+         *
+         * The body data is formatted based on the detected content type and returned along
+         * with the appropriate headers.
+         *
+         * @param mixed $body The request body, which can be an array, string, or other supported types.
+         *                    This variable is passed by reference and may be modified to match the
+         *                    Content-Type.
+         * 
+         * @return array An associative array containing 'headers' and 'body', where 'headers' holds
+         *               the Content-Type and 'body' holds the formatted body data.
+         * 
+         * @throws \InvalidArgumentException If the body cannot be properly encoded or an unsupported body type is detected.
+         * 
+         * @example
+         * $result = $this->detectContentTypeAndFormatBody($body);
+         * header("Content-Type: " . $result['headers']['Content-Type']);
+         * echo $result['body'];
+         */
+        private function detectContentTypeAndFormatBody(mixed &$body): array
+        {
+            try {
+                if (is_array($body)) {
+                    // Check if the array contains a file for multipart/form-data
+                    if ($this->containsFile($body)) {
+                        return [
+                            'headers' => [
+                                'Content-Type' => 'multipart/form-data'
+                            ],
+                            'body' => $body,
+                        ];
+                    }
+
+                    // Determine if the array is associative or sequential
+                    $isAssociative = $this->isAssociativeArray($body);
+                    if ($isAssociative) {
+                        // Handle associative arrays as JSON
+                        $encodedBody = json_encode($body, JSON_THROW_ON_ERROR);
+
+                        return [
+                            'headers' => [
+                                'Content-Type' => 'application/json'
+                            ],
+                            'body' => $encodedBody,
+                        ];
+                    } else {
+                        // Handle sequential arrays as x-www-form-urlencoded
+                        $encodedBody = http_build_query($body, '', '&', PHP_QUERY_RFC3986);
+
+                        return [
+                            'headers' => [
+                                'Content-Type' => 'application/x-www-form-urlencoded'
+                            ],
+                            'body' => $encodedBody,
+                        ];
+                    }
+                } elseif (is_string($body)) {
+                    // If the body is already a string, assume plain text by default
+                    return [
+                        'headers' => [
+                            'Content-Type' => 'text/plain'
+                        ],
+                        'body' => $body,
+                    ];
+                } else {
+                    // Unsupported body type detected, log a warning if logger is available
+                    if (isset($this->logger)) {
+                        $this->logger->warning("Unsupported body type provided. Skipping content type detection.");
+                    }
+
+                    // Return the body as-is with a plain text Content-Type
+                    return [
+                        'headers' => [
+                            'Content-Type' => 'text/plain'
+                        ],
+                        'body' => $body,
+                    ];
+                }
+            } catch (\JsonException $e) {
+                // Handle JSON-specific encoding errors
+                if (isset($this->logger)) {
+                    $this->logger->warning('Failed to encode JSON: ' . $e->getMessage());
+                }
+
+                // Return an empty array if JSON encoding fails
+                return [];
+            } catch (\Exception $e) {
+                // General catch for any other unexpected errors
+                if (isset($this->logger)) {
+                    $this->logger->warning('Error processing body: ' . $e->getMessage());
+                }
+
+                // Return an empty array if JSON encoding fails
+                return [];
+            }
+        }
+
+        /**
+         * Check if the provided array contains a file, indicating multipart/form-data.
+         *
+         * @param array $data The array to check for files.
+         * @return bool True if the array contains a file, false otherwise.
+         */
+        private function containsFile(array $data): bool
+        {
+            foreach ($data as $item) {
+                if (is_array($item)) {
+                    // Recursively check nested arrays for files
+                    if ($this->containsFile($item)) {
+                        return true;
+                    }
+                } elseif ($item instanceof \SplFileInfo) {
+                    // Check if the item is a file object
+                    return true;
+                } elseif (is_string($item) && file_exists($item)) {
+                    // If the item is a string path to a file, consider it a file
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /**
+         * Determine if an array is associative.
+         *
+         * @param array $array The array to check.
+         * @return bool True if the array is associative, false if it is sequential.
+         */
+        private function isAssociativeArray(array $array): bool
+        {
+            return array_keys($array) !== range(0, count($array) - 1);
+        }
+
+        /**
          * Send an HTTP GET request.
          *
+         * This method sends a GET request to the specified URI with optional headers,
+         * query parameters, and additional options. It detects if body content has been
+         * erroneously provided and logs a warning if so. The body content is discarded.
+         *
          * @param string $uri The endpoint URI.
-         * @param array $options Additional request options.
+         * @param array<string, string> $headers Additional request headers (default: empty).
+         * @param array<string, mixed> $queryParams Additional query parameters (default: empty).
+         * @param array<string, mixed> $options Additional request options that override defaults (default: empty).
+         * 
          * @return ResponseInterface The HTTP response.
+         * 
          * @throws GuzzleException If the request fails.
          */
-        public function get(string $uri, array $options = []): ResponseInterface
-        {
+        public function get(
+            string $uri,
+            mixed $headers = [],
+            mixed $queryParams = [],
+            mixed $options = [],
+            mixed $catchBody = null
+        ): ResponseInterface {
+            try {
+                // Handle content type detection and body formatting if no content type is specified
+                if ($this->evaluateRequestIntention && ($catchBody !== null || isset($options['body']))) {
+                    // Log a warning if body content is detected in a DELETE request
+                    $this->logger->warning("Body data was provided in a GET request, which is unusual and not permitted by RFC 9110. The body has been discarded. You can force the request by disabling request intention evaluation.");
+
+                    // Shift parameters
+                    $catchBody = null; // Discard the body content
+                    $options = $queryParams;
+                    $queryParams = $headers;
+                    $headers = [];
+                    
+                    // Remove the body from the request options
+                    unset($options['body']);
+                }
+
+                // Add query parameters to the options
+                if (!empty($queryParams)) {
+                    $options['query'] = $queryParams;
+                }
+
+                // Add headers to the options
+                $options['headers'] = array_merge($this->headers, $headers);
+            } catch (\Exception $e) {
+                // Handle exceptions and rethrow them with additional context if needed
+                throw new \RuntimeException('GET request preparation failed: ' . $e->getMessage(), 0, $e);
+            }
+
+            // Send the GET request and return the response
             return $this->request('GET', $uri, $options);
+        }
+
+        /**
+         * Send an HTTP DELETE request.
+         *
+         * This method sends a DELETE request to the specified URI with optional headers,
+         * query parameters, and additional options. It detects if body content has been
+         * erroneously provided and logs a warning if so. The body content is discarded.
+         *
+         * @param string $uri The endpoint URI.
+         * @param array<string, string> $headers Additional request headers (default: empty).
+         * @param array<string, mixed> $queryParams Additional query parameters (default: empty).
+         * @param array<string, mixed> $options Additional request options that override defaults (default: empty).
+         * 
+         * @return ResponseInterface The HTTP response.
+         * 
+         * @throws GuzzleException If the request fails.
+         */
+        public function delete(
+            string $uri,
+            mixed $headers = [],
+            mixed $queryParams = [],
+            mixed $options = [],
+            mixed $catchBody = null
+        ): ResponseInterface {
+            try {
+                // Handle content type detection and body formatting if no content type is specified
+                if ($this->evaluateRequestIntention && ($catchBody !== null || isset($options['body']))) {
+                    // Log a warning if body content is detected in a DELETE request
+                    $this->logger->warning("Body data was provided in a DELETE request, which is unusual and not permitted by RFC 9110. The body has been discarded. You can force the request by disabling request intention evaluation.");
+
+                    // Shift parameters
+                    $catchBody = null; // Discard the body content
+                    $options = $queryParams;
+                    $queryParams = $headers;
+                    $headers = [];
+                    
+                    // Remove the body from the request options
+                    unset($options['body']);
+                }
+
+                // Add query parameters to the options
+                if (!empty($queryParams)) {
+                    $options['query'] = $queryParams;
+                }
+
+                // Add headers to the options
+                $options['headers'] = array_merge($this->headers, $headers);
+            } catch (\Exception $e) {
+                // Handle exceptions and rethrow them with additional context if needed
+                throw new \RuntimeException('DELETE request preparation failed: ' . $e->getMessage(), 0, $e);
+            }
+
+            // Send the DELETE request and return the response
+            return $this->request('DELETE', $uri, $options);
         }
 
         /**
          * Send an HTTP POST request.
          *
+         * This method sends a POST request to the specified URI with optional body data,
+         * headers, query parameters, and additional options. It automatically detects
+         * the content type based on the body and formats the request accordingly.
+         *
          * @param string $uri The endpoint URI.
-         * @param array $options Additional request options.
+         * @param mixed $body The request body, which could be JSON, form data, or other supported types.
+         * @param array<string, string> $headers Additional request headers (default: empty).
+         * @param array<string, mixed> $queryParams Additional query parameters (default: empty).
+         * @param array<string, mixed> $options Additional request options that override defaults (default: empty).
+         * 
          * @return ResponseInterface The HTTP response.
+         * 
          * @throws GuzzleException If the request fails.
+         * @throws InvalidArgumentException If body formatting fails or an unsupported content type is provided.
          */
-        public function post(string $uri, array $options = []): ResponseInterface
-        {
+        public function post(
+            string $uri,
+            mixed $body = null,
+            array $headers = [],
+            array $queryParams = [],
+            array $options = []
+        ): ResponseInterface {
+            try {
+                // Handle content type detection and body formatting if no content type is specified
+                if ($this->evaluateRequestIntention && !isset($headers['Content-Type'])) {
+                    // Detect content type and format body accordingly
+                    $contentTypeAndBody = $this->detectContentTypeAndFormatBody($body);
+        
+                    // Merge the detected headers and body with the provided options
+                    $headers = array_merge($headers, $contentTypeAndBody['headers']);
+                    $body = $contentTypeAndBody['body'];
+                }
+
+                // Add query parameters to the options
+                if (!empty($queryParams)) {
+                    $options['query'] = $queryParams;
+                }
+
+                // Add body and headers to the options
+                $options['body'] = $body;
+                $options['headers'] = array_merge($this->headers, $headers);
+            } catch (\Exception $e) {
+                // Handle exceptions and rethrow them with additional context if needed
+                throw new \RuntimeException('POST request preparation failed: ' . $e->getMessage(), 0, $e);
+            }
+
+            // Send the POST request and return the response
             return $this->request('POST', $uri, $options);
         }
 
         /**
          * Send an HTTP PUT request.
          *
-         * @param string $uri The endpoint URI.
-         * @param array $options Additional request options.
-         * @return ResponseInterface The HTTP response.
-         * @throws GuzzleException If the request fails.
-         */
-        public function put(string $uri, array $options = []): ResponseInterface
-        {
-            return $this->request('PUT', $uri, $options);
-        }
-
-        /**
-         * Send an HTTP DELETE request.
+         * This method sends a PUT request to the specified URI with optional body data,
+         * headers, query parameters, and additional options. It automatically detects
+         * the content type based on the body and formats the request accordingly. An
+         * idempotency key is automatically added to ensure idempotency for PUT requests.
          *
          * @param string $uri The endpoint URI.
-         * @param array $options Additional request options.
+         * @param mixed $body The request body, which could be JSON, form data, or other supported types.
+         * @param array<string, string> $headers Additional request headers (default: empty).
+         * @param array<string, mixed> $queryParams Additional query parameters (default: empty).
+         * @param array<string, mixed> $options Additional request options that override defaults (default: empty).
+         * 
          * @return ResponseInterface The HTTP response.
+         * 
          * @throws GuzzleException If the request fails.
+         * @throws InvalidArgumentException If body formatting fails or an unsupported content type is provided.
          */
-        public function delete(string $uri, array $options = []): ResponseInterface
-        {
-            return $this->request('DELETE', $uri, $options);
+        public function put(
+            string $uri,
+            mixed $body = null,
+            array $headers = [],
+            array $queryParams = [],
+            array $options = []
+        ): ResponseInterface {
+            try {
+                // Handle content type detection and body formatting if no content type is specified
+                if ($this->evaluateRequestIntention && !isset($headers['Content-Type'])) {
+                    // Detect content type and format body accordingly
+                    $contentTypeAndBody = $this->detectContentTypeAndFormatBody($body);
+        
+                    // Merge the detected headers and body with the provided options
+                    $headers = array_merge($headers, $contentTypeAndBody['headers']);
+                    $body = $contentTypeAndBody['body'];
+                }
+        
+                // Add query parameters to the options
+                if (!empty($queryParams)) {
+                    $options['query'] = $queryParams;
+                }
+        
+                // Add body and headers to the options
+                $options['body'] = $body;
+                $options['headers'] = array_merge($this->headers, $headers);
+        
+                // Ensure the request is idempotent by adding a unique key
+                $options['headers']['Idempotency-Key'] = $options['headers']['Idempotency-Key'] ?? bin2hex(random_bytes(16));
+            } catch (\Exception $e) {
+                // Handle exceptions and rethrow them with additional context if needed
+                throw new \RuntimeException('PUT request preparation failed: ' . $e->getMessage(), 0, $e);
+            }
+        
+            // Send the PUT request and return the response
+            return $this->request('PUT', $uri, $options);
         }
 
         /**
          * Send an HTTP PATCH request.
          *
+         * This method sends a PATCH request to the specified URI with optional body data,
+         * headers, query parameters, and additional options. It automatically detects
+         * the content type based on the body and formats the request accordingly. An
+         * idempotency key is automatically added to ensure idempotency for PATCH requests.
+         *
          * @param string $uri The endpoint URI.
-         * @param array $options Additional request options.
+         * @param mixed $body The request body, which could be JSON, form data, or other supported types.
+         * @param array<string, string> $headers Additional request headers (default: empty).
+         * @param array<string, mixed> $queryParams Additional query parameters (default: empty).
+         * @param array<string, mixed> $options Additional request options that override defaults (default: empty).
+         * 
          * @return ResponseInterface The HTTP response.
+         * 
          * @throws GuzzleException If the request fails.
+         * @throws InvalidArgumentException If body formatting fails or an unsupported content type is provided.
          */
-        public function patch(string $uri, array $options = []): ResponseInterface
-        {
+        public function patch(
+            string $uri,
+            mixed $body = null,
+            array $headers = [],
+            array $queryParams = [],
+            array $options = []
+        ): ResponseInterface {
+            try {
+                // Handle content type detection and body formatting if no content type is specified
+                if ($this->evaluateRequestIntention && !isset($headers['Content-Type'])) {
+                    // Detect content type and format body accordingly
+                    $contentTypeAndBody = $this->detectContentTypeAndFormatBody($body);
+        
+                    // Merge the detected headers and body with the provided options
+                    $headers = array_merge($headers, $contentTypeAndBody['headers']);
+                    $body = $contentTypeAndBody['body'];
+                }
+        
+                // Add query parameters to the options
+                if (!empty($queryParams)) {
+                    $options['query'] = $queryParams;
+                }
+        
+                // Add body and headers to the options
+                $options['body'] = $body;
+                $options['headers'] = array_merge($this->headers, $headers);
+        
+                // Ensure the request is idempotent by adding a unique key
+                $options['headers']['Idempotency-Key'] = $options['headers']['Idempotency-Key'] ?? bin2hex(random_bytes(16));
+            } catch (\Exception $e) {
+                // Handle exceptions and rethrow them with additional context if needed
+                throw new \RuntimeException('PATCH request preparation failed: ' . $e->getMessage(), 0, $e);
+            }
+        
+            // Send the PATCH request and return the response
             return $this->request('PATCH', $uri, $options);
         }
         
