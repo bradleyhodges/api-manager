@@ -1,11 +1,11 @@
 # APIManager 📦
 
-**APIManager** is a robust PHP package that simplifies API development by providing utilities for handling CORS, managing API responses, implementing rate limiting, securing your API with security headers, sanitizing input, and much more. 🚀
+**APIManager** is a robust PHP package that simplifies API development by providing compliant, secure utilities for handling CORS, managing API responses, implementing rate limiting, making HTTP requests, sanitizing input, and much more.
 
 ## Features 🎯
 
-- 🌐 **CORS Management**: Easily configure Cross-Origin Resource Sharing (CORS) rules.
-- 🌐 **Advanced HTTP Client**: Send HTTP requests with support for Happy Eyeballs, DNS caching, HTTP/1, 2, and 3*, and more.
+- 🌐 **Powerful HTTP Client**: Send any HTTP request quickly with support for browser impersonation, Happy Eyeballs, DNS caching, HTTP/1, 2, and 3*, and more.
+- 🔏 **CORS Management**: Easily configure Cross-Origin Resource Sharing (CORS) rules.
 - 📊 **Rate Limiting**: Implement rate limiting with customizable policies.
 - 🗄️ **Response Management**: Structure your API responses and handle errors consistently.
 - 🧹 **Input Sanitization**: Clean and sanitize user input.
@@ -57,6 +57,10 @@ The `HTTP` class provides a powerful HTTP client built on top of [Guzzle](https:
 Some really neat features and enhancements are enabled by default, including:
 
 - **Happy Eyeballs Algorithm**: This optimizes connection speed by attempting to connect to both IPv4 and IPv6 addresses simultaneously, selecting the one that responds the quickest. This ensures minimal latency, especially in environments where network configurations might favor one protocol over the other.
+
+- **Content-Type Detection**: Automatically detects the correct content type for requests and formats content accordingly.
+
+- **Browser Impersonation**: Sends requests that mimic browser behavior, including handling cookies and redirects.
 
 - **DNS Caching**: DNS responses are cached for faster subsequent requests, reducing the overhead of repeated DNS lookups. This is especially useful for APIs with high traffic, as it cuts down on repeated DNS resolution time and improves response times.
 
@@ -261,26 +265,32 @@ echo $apiManager->sanitizeInput('some input');
 
 ### `HTTP`
 
-- **`request(string $method, string $uri, array $options = [])`**: Send a request to the specified URI, using the given method, with optional configuration. See [Guzzle 7 docs](https://docs.guzzlephp.org/en/stable/quickstart.html) for available configuration and other methods.
-- **`requestAsync(string $method, string $uri, array $options = [], ?LoopInterface $loop = null)`**: The asynchronous version of the request method. This returns a promise and is intended to be run in an event loop. If no loop is provided, a new one is created.
-- **`get(string $uri, array $options = [])`**: Shorthand method for `request('GET', ...);`
-- **`post(string $uri, array $options = [])`**: Shorthand method for `request('POST', ...);`
-- **`put(string $uri, array $options = [])`**: Shorthand method for `request('PUT', ...);`
-- **`delete(string $uri, array $options = [])`**: Shorthand method for `request('DELETE', ...);`
-- **`patch(string $uri, array $options = [])`**: Shorthand method for `request('PATCH', ...);`
-- **`setDefaultHeaders(array $headers)`**: Set default headers for all requests.
+- **`request(string $method, string $uri, array $options = [])`**: Send an HTTP request to the specified URI using the given method with optional configuration. Supports Happy Eyeballs and idempotency key generation for POST and PATCH requests. See [Guzzle 7 docs](https://docs.guzzlephp.org/en/stable/quickstart.html) for available configuration.
+- **`requestAsync(string $method, string $uri, array $options = [], ?LoopInterface $loop = null)`**: The asynchronous version of the request method, returning a promise to be run in an event loop. Supports Happy Eyeballs.
+- **`get(string $uri, mixed $headers = [], mixed $queryParams = [], mixed $options = [])`**: Send an HTTP GET request with optional headers, query parameters, and options. Logs a warning and discards the body if content is provided.
+- **`post(string $uri, mixed $body = null, array $headers = [], array $queryParams = [], array $options = [])`**: Send an HTTP POST request with optional body data, headers, query parameters, and options. Automatically detects and formats content type.
+- **`put(string $uri, mixed $body = null, array $headers = [], array $queryParams = [], array $options = [])`**: Send an HTTP PUT request. Automatically detects content type and adds an idempotency key.
+- **`delete(string $uri, mixed $headers = [], mixed $queryParams = [], mixed $options = [])`**: Send an HTTP DELETE request. Logs a warning and discards the body if content is provided.
+- **`patch(string $uri, mixed $body = null, array $headers = [], array $queryParams = [], array $options = [])`**: Send an HTTP PATCH request with automatic content type detection and idempotency key generation.
+- **`impersonateBrowser(string $method, string $uri, mixed $body = null, array $headers = [], array $queryParams = [], array $options = [])`**: Send an HTTP request that mimics a browser's behavior, including headers, cookies, and redirects. Supported methods include GET, POST, PUT, PATCH, and DELETE.
+- **`setDefaultHeaders(array $headers)`**: Set default headers to be used for all requests.
 - **`setBearerToken(string $token)`**: Set a Bearer token for authorization.
-- **`setBasicAuth(string $username, string $password)`**: Set Basic Authentication credentials.
+- **`setBasicAuth(string $username, string $password)`**: Set Basic Authentication credentials with secure password handling.
 - **`addQueryParameters(array $params)`**: Add global query parameters for all requests.
 - **`cookieJar(): CookieJar`**: Retrieve the CookieJar instance for managing cookies.
-- **`useHappyEyeballs(bool $enabled)`**: Enable or disable the Happy Eyeballs algorithm for faster connections.
+- **`resolveHost(string $host): array`**: Resolve both IPv4 and IPv6 addresses for the given host using either system DNS or Cloudflare's DNS-over-HTTPS service, depending on configuration.
+
+The following feature flags allow you to customize the behavior of the HTTP client. Some of these features are enabled by default:
+
+- **`useHappyEyeballs(bool $enabled)`**: Enable or disable the Happy Eyeballs algorithm for faster connections. *(Enabled by default)*
 - **`useRetry(bool $enabled)`**: Enable or disable the retry mechanism with exponential backoff.
 - **`useDnsCache(bool $enabled)`**: Enable or disable DNS caching.
-- **`useHttpVersionFallback(bool $enabled)`**: Enable or disable HTTP version fallback (HTTP/3 -> HTTP/2 -> HTTP/1.1).
-- **`useMinTlsVersion(bool $enabled)`**: Enable or disable the enforcement of minimum TLS version 1.2.
+- **`useHttpVersionFallback(bool $enabled)`**: Enable or disable HTTP version fallback (HTTP/3 -> HTTP/2 -> HTTP/1.1). *(Enabled by default)*
+- **`useMinTlsVersion(bool $enabled)`**: Enable or disable the enforcement of minimum TLS version 1.2. *(Enabled by default)*
 - **`useCloudflareDns(bool $enabled)`**: Enable or disable the use of Cloudflare's DNS resolver.
-- **`useCookieJar(bool $enabled)`**: Enable or disable the use of a CookieJar for managing cookies.
-- **`useDefaultConfig(bool $enabled)`**: Enable or disable the use of the default APIManager\HTTP Guzzle config.
+- **`useCookieJar(bool $enabled)`**: Enable or disable the use of a CookieJar for managing cookies. *(Enabled by default)*
+- **`useDefaultConfig(bool $enabled)`**: Enable or disable the use of the default `APIManager\HTTP` Guzzle configuration. *(Enabled by default)*
+- **`useEvaluateRequestIntention(bool $evaluate)`**: Enable or disable evaluation of request intention (e.g., to prevent body data on GET or DELETE requests). *(Enabled by default)*
 
 ## License 📄
 
