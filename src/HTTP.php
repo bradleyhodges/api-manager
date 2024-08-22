@@ -1,6 +1,8 @@
 <?php
     namespace APIManager;
 
+    use JsonException;
+    use SplFileInfo;
     use Throwable;
     use React\EventLoop\Loop;
     use function React\Promise\reject;
@@ -41,7 +43,11 @@
      */
     class HTTP
     {
-        public $loop;
+        /**
+         * @var LoopInterface|null $loop The ReactPHP event loop instance.
+         */
+        private $loop;
+        
         /**
          * @var Client|null $client The Guzzle HTTP client instance.
          */
@@ -129,8 +135,6 @@
 
         /**
          * Whether to evaluate request intention (e.g., detect accidental body data in GET requests).
-         *
-         * @var bool
          */
         private bool $evaluateRequestIntention = true;
     
@@ -385,7 +389,7 @@
                                 // Convert the Guzzle promise to a ReactPHP promise, managing the loop
                                 return $this->convertGuzzlePromiseToReactPromise($guzzlePromise, $loop);
                             })
-                            ->otherwise(function (Throwable $throwable) use ($host) {
+                            ->otherwise(function (Throwable $throwable) use ($host): PromiseInterface {
                                 $this->logError(sprintf('Failed to resolve Happy Eyeballs for host: %s. Error: ', $host) . $throwable->getMessage());
                                 return reject($throwable);
                             });
@@ -1082,12 +1086,12 @@
          * @param mixed $body The request body, which can be an array, string, or other supported types.
          *                    This variable is passed by reference and may be modified to match the
          *                    Content-Type.
-         * 
+         *
          * @return array An associative array containing 'headers' and 'body', where 'headers' holds
          *               the Content-Type and 'body' holds the formatted body data.
-         * 
-         * @throws \InvalidArgumentException If the body cannot be properly encoded or an unsupported body type is detected.
-         * 
+         *
+         * @throws InvalidArgumentException If the body cannot be properly encoded or an unsupported body type is detected.
+         *
          * @example
          * $result = $this->detectContentTypeAndFormatBody($body);
          * header("Content-Type: " . $result['headers']['Content-Type']);
@@ -1119,18 +1123,20 @@
                             ],
                             'body' => $encodedBody,
                         ];
-                    } else {
-                        // Handle sequential arrays as x-www-form-urlencoded
-                        $encodedBody = http_build_query($body, '', '&', PHP_QUERY_RFC3986);
-
-                        return [
-                            'headers' => [
-                                'Content-Type' => 'application/x-www-form-urlencoded'
-                            ],
-                            'body' => $encodedBody,
-                        ];
                     }
-                } elseif (is_string($body)) {
+                    
+                    // Handle sequential arrays as x-www-form-urlencoded
+                    $encodedBody = http_build_query($body, '', '&', PHP_QUERY_RFC3986);
+                    return [
+                        'headers' => [
+                            'Content-Type' => 'application/x-www-form-urlencoded'
+                        ],
+                        'body' => $encodedBody,
+                    ];
+                }
+
+                // Handle other body types
+                if (is_string($body)) {
                     // If the body is already a string, assume plain text by default
                     return [
                         'headers' => [
@@ -1140,8 +1146,8 @@
                     ];
                 } else {
                     // Unsupported body type detected, log a warning if logger is available
-                    if (isset($this->logger)) {
-                        $this->logger->warning("Unsupported body type provided. Skipping content type detection.");
+                    if (property_exists($this, 'logger') && $this->logger !== null) {
+                        $this->logError("Unsupported body type provided. Skipping content type detection.");
                     }
 
                     // Return the body as-is with a plain text Content-Type
@@ -1152,18 +1158,18 @@
                         'body' => $body,
                     ];
                 }
-            } catch (\JsonException $e) {
+            } catch (JsonException $e) {
                 // Handle JSON-specific encoding errors
-                if (isset($this->logger)) {
-                    $this->logger->warning('Failed to encode JSON: ' . $e->getMessage());
+                if (property_exists($this, 'logger') && $this->logger !== null) {
+                    $this->logError('Failed to encode JSON: ' . $e->getMessage());
                 }
 
                 // Return an empty array if JSON encoding fails
                 return [];
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 // General catch for any other unexpected errors
-                if (isset($this->logger)) {
-                    $this->logger->warning('Error processing body: ' . $e->getMessage());
+                if (property_exists($this, 'logger') && $this->logger !== null) {
+                    $this->logError('Error processing body: ' . $e->getMessage());
                 }
 
                 // Return an empty array if JSON encoding fails
@@ -1185,7 +1191,7 @@
                     if ($this->containsFile($item)) {
                         return true;
                     }
-                } elseif ($item instanceof \SplFileInfo) {
+                } elseif ($item instanceof SplFileInfo) {
                     // Check if the item is a file object
                     return true;
                 } elseif (is_string($item) && file_exists($item)) {
@@ -1193,6 +1199,7 @@
                     return true;
                 }
             }
+            
             return false;
         }
 
@@ -1234,7 +1241,7 @@
                 // Handle content type detection and body formatting if no content type is specified
                 if ($this->evaluateRequestIntention && ($catchBody !== null || isset($options['body']))) {
                     // Log a warning if body content is detected in a DELETE request
-                    $this->logger->warning("Body data was provided in a GET request, which is unusual and not permitted by RFC 9110. The body has been discarded. You can force the request by disabling request intention evaluation.");
+                    $this->logError("Body data was provided in a GET request, which is unusual and not permitted by RFC 9110. The body has been discarded. You can force the request by disabling request intention evaluation.");
 
                     // Shift parameters
                     $catchBody = null; // Discard the body content
@@ -1247,15 +1254,15 @@
                 }
 
                 // Add query parameters to the options
-                if (!empty($queryParams)) {
+                if ($queryParams !== []) {
                     $options['query'] = $queryParams;
                 }
 
                 // Add headers to the options
                 $options['headers'] = array_merge($this->headers, $headers);
-            } catch (\Exception $e) {
+            } catch (Exception $exception) {
                 // Handle exceptions and rethrow them with additional context if needed
-                throw new \RuntimeException('GET request preparation failed: ' . $e->getMessage(), 0, $e);
+                throw new RuntimeException('GET request preparation failed: ' . $exception->getMessage(), 0, $exception);
             }
 
             // Send the GET request and return the response
@@ -1289,7 +1296,7 @@
                 // Handle content type detection and body formatting if no content type is specified
                 if ($this->evaluateRequestIntention && ($catchBody !== null || isset($options['body']))) {
                     // Log a warning if body content is detected in a DELETE request
-                    $this->logger->warning("Body data was provided in a DELETE request, which is unusual and not permitted by RFC 9110. The body has been discarded. You can force the request by disabling request intention evaluation.");
+                    $this->logError("Body data was provided in a DELETE request, which is unusual and not permitted by RFC 9110. The body has been discarded. You can force the request by disabling request intention evaluation.");
 
                     // Shift parameters
                     $catchBody = null; // Discard the body content
@@ -1302,15 +1309,15 @@
                 }
 
                 // Add query parameters to the options
-                if (!empty($queryParams)) {
+                if ($queryParams !== []) {
                     $options['query'] = $queryParams;
                 }
 
                 // Add headers to the options
                 $options['headers'] = array_merge($this->headers, $headers);
-            } catch (\Exception $e) {
+            } catch (Exception $exception) {
                 // Handle exceptions and rethrow them with additional context if needed
-                throw new \RuntimeException('DELETE request preparation failed: ' . $e->getMessage(), 0, $e);
+                throw new RuntimeException('DELETE request preparation failed: ' . $exception->getMessage(), 0, $exception);
             }
 
             // Send the DELETE request and return the response
@@ -1354,16 +1361,16 @@
                 }
 
                 // Add query parameters to the options
-                if (!empty($queryParams)) {
+                if ($queryParams !== []) {
                     $options['query'] = $queryParams;
                 }
 
                 // Add body and headers to the options
                 $options['body'] = $body;
                 $options['headers'] = array_merge($this->headers, $headers);
-            } catch (\Exception $e) {
+            } catch (Exception $exception) {
                 // Handle exceptions and rethrow them with additional context if needed
-                throw new \RuntimeException('POST request preparation failed: ' . $e->getMessage(), 0, $e);
+                throw new RuntimeException('POST request preparation failed: ' . $exception->getMessage(), 0, $exception);
             }
 
             // Send the POST request and return the response
@@ -1408,7 +1415,7 @@
                 }
         
                 // Add query parameters to the options
-                if (!empty($queryParams)) {
+                if ($queryParams !== []) {
                     $options['query'] = $queryParams;
                 }
         
@@ -1418,9 +1425,9 @@
         
                 // Ensure the request is idempotent by adding a unique key
                 $options['headers']['Idempotency-Key'] = $options['headers']['Idempotency-Key'] ?? bin2hex(random_bytes(16));
-            } catch (\Exception $e) {
+            } catch (Exception $exception) {
                 // Handle exceptions and rethrow them with additional context if needed
-                throw new \RuntimeException('PUT request preparation failed: ' . $e->getMessage(), 0, $e);
+                throw new RuntimeException('PUT request preparation failed: ' . $exception->getMessage(), 0, $exception);
             }
         
             // Send the PUT request and return the response
@@ -1465,7 +1472,7 @@
                 }
         
                 // Add query parameters to the options
-                if (!empty($queryParams)) {
+                if ($queryParams !== []) {
                     $options['query'] = $queryParams;
                 }
         
@@ -1475,9 +1482,9 @@
         
                 // Ensure the request is idempotent by adding a unique key
                 $options['headers']['Idempotency-Key'] = $options['headers']['Idempotency-Key'] ?? bin2hex(random_bytes(16));
-            } catch (\Exception $e) {
+            } catch (Exception $exception) {
                 // Handle exceptions and rethrow them with additional context if needed
-                throw new \RuntimeException('PATCH request preparation failed: ' . $e->getMessage(), 0, $e);
+                throw new RuntimeException('PATCH request preparation failed: ' . $exception->getMessage(), 0, $exception);
             }
         
             // Send the PATCH request and return the response
