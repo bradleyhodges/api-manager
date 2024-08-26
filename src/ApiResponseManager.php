@@ -24,13 +24,13 @@
          * Array to store global messages.
          * @var array<string>
          */
-        private array $globalMessages = [];
+        public array $globalMessages = [];
 
         /**
          * Array to store global errors.
          * @var array<string>
          */
-        private array $globalErrors = [];
+        public array $globalErrors = [];
 
         /**
          * The CORS handler instance.
@@ -258,6 +258,32 @@
                 $this->globalErrors,   // errors
                 $statusCode            // response code
             );
+        }
+        
+        /**
+         * Checks if the response can continue based on the global errors array.
+         *
+         * @return bool Whether the response can continue.
+         */
+        public function canContinue(): bool
+        {
+            return empty($this->globalErrors);
+        }
+
+        /**
+         * Handles continuance based on the presence of errors.
+         * 
+         * If there are errors present, the script will bail out with the provided status code.
+         * 
+         * @param int|null $statusCode The HTTP status code to use when bailing out. Defaults to 400.
+         */
+        public function handleContinuance(?int $statusCode = 400): void
+        {
+            // Check if the response can continue (based on whether or not there are errors present)
+            if (!$this->canContinue()) {
+                // If there are errors, bail out with the provided status code
+                $this->bailOut($statusCode);
+            }
         }
 
         /**
