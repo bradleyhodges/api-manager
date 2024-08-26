@@ -255,7 +255,7 @@
          */
         public function canContinue(): bool
         {
-            return empty($this->globalErrors);
+            return $this->globalErrors === [];
         }
 
         /**

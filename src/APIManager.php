@@ -693,10 +693,11 @@ declare(strict_types=1);
                         ]);
                         $this->apiResponseManager->bailOut(400);
                     }
+                    
                     break;
                 case 'XML':
                     $xmlContent = file_get_contents("php://input");
-                    if (!$xmlContent) {
+                    if ($xmlContent === '' || $xmlContent === '0' || $xmlContent === false) {
                         $this->apiResponseManager->addError([
                             'status' => '400',
                             'source' => ['pointer' => '/data'],
@@ -705,6 +706,7 @@ declare(strict_types=1);
                         ]);
                         $this->apiResponseManager->bailOut(400);
                     }
+                    
                     $inputData = simplexml_load_string($xmlContent);
                     if ($inputData === false) {
                         $this->apiResponseManager->addError([
@@ -715,6 +717,7 @@ declare(strict_types=1);
                         ]);
                         $this->apiResponseManager->bailOut(400);
                     }
+                    
                     break;
                 case 'POST':
                     $inputData = $_POST;
@@ -730,25 +733,25 @@ declare(strict_types=1);
                         'status' => '400',
                         'source' => ['pointer' => '/data'],
                         'title' => 'Unsupported data source',
-                        'detail' => "Unsupported data source: {$uses}",
+                        'detail' => 'Unsupported data source: ' . $uses,
                     ]);
                     $this->apiResponseManager->bailOut(400);
             }
             
             // Loop through the parameters to validate and sanitize them
             $result = [];
-            foreach ($parameters as $param) {
-                $mandatory = $param['mandatory'] ?? true;
-                $requires = $param['requires'] ?? null;
-                $name = $param['name'] ?? $requires;
-                $format = $param['format'] ?? null;
-                $strictFormat = $param['strictFormat'] ?? true;
-                $sanitize = $param['sanitize'] ?? true;
-                $descriptor = $param['descriptor'] ?? $name;
-                $maxLength = $param['maxLength'] ?? null;
+            foreach ($parameters as $parameter) {
+                $mandatory = $parameter['mandatory'] ?? true;
+                $requires = $parameter['requires'] ?? null;
+                $name = $parameter['name'] ?? $requires;
+                $format = $parameter['format'] ?? null;
+                $strictFormat = $parameter['strictFormat'] ?? true;
+                $sanitize = $parameter['sanitize'] ?? true;
+                $descriptor = $parameter['descriptor'] ?? $name;
+                $maxLength = $parameter['maxLength'] ?? null;
 
                 // Create a dynamic JSON Pointer for the error source
-                $pointer = "/data/attributes/{$name}";
+                $pointer = '/data/attributes/' . $name;
 
                 // Check if the required parameter exists in the input data
                 $value = $inputData[$requires] ?? null;
@@ -759,7 +762,7 @@ declare(strict_types=1);
                         'status' => '400',  // Bad Request
                         'source' => ['pointer' => $pointer],
                         'title' => 'Missing Attribute',
-                        'detail' => "{$descriptor} must not be empty.",
+                        'detail' => $descriptor . ' must not be empty.',
                     ];
                     continue;
                 }
@@ -773,22 +776,22 @@ declare(strict_types=1);
                 // Validate the format if a validation rule is provided
                 if ($format !== null) {
                     if (is_string($format)) {
-                        if ($strictFormat && !preg_match($format, $value)) {
+                        if ($strictFormat && (preg_match($format, $value) === 0 || preg_match($format, $value) === false)) {
                             $errors[] = [
                                 'status' => '422',  // Unprocessable Entity
                                 'source' => ['pointer' => $pointer],
                                 'title' => 'Invalid Format',
-                                'detail' => "{$descriptor} is not in the required format.",
+                                'detail' => $descriptor . ' is not in the required format.',
                             ];
                             continue;
                         }
-                    } elseif (is_int($format) && !filter_var($value, $format, $param['options'] ?? [])) {
+                    } elseif (is_int($format) && !filter_var($value, $format, $parameter['options'] ?? [])) {
                         if ($strictFormat) {
                             $errors[] = [
                                 'status' => '422',  // Unprocessable Entity
                                 'source' => ['pointer' => $pointer],
                                 'title' => 'Invalid Format',
-                                'detail' => "{$descriptor} is not in the required format.",
+                                'detail' => $descriptor . ' is not in the required format.',
                             ];
                             continue;
                         }
@@ -805,7 +808,7 @@ declare(strict_types=1);
             }
 
             // Handle errors if there are any
-            if (!empty($errors)) {
+            if ($errors !== []) {
                 foreach ($errors as $error) {
                     $this->apiResponseManager->addError($error);
                 }
