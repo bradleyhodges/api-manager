@@ -840,6 +840,21 @@ declare(strict_types=1);
         }
 
         /**
+         * Checks if a given string is a valid JSON.
+         *
+         * @param string $string The string to check.
+         * @return bool True if the string is a valid JSON, false otherwise.
+         */
+        public function isJson($string) {
+            if (is_string($string)) {
+                json_decode($string);
+                return (json_last_error() == JSON_ERROR_NONE);
+            }
+            
+            return false;
+        }
+
+        /**
          * Retrieves sanitized input from the $_GET superglobal.
          * 
          * @param string $key The key to retrieve from the $_GET array.
