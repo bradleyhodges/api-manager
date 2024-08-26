@@ -202,10 +202,7 @@
                 ],
                 'errors' => $allErrors,
             ];
-
-            // // Log the response
-            // $this->errorLogger->logInfo('A client was responded to:' . json_encode($response, JSON_THROW_ON_ERROR));
-
+            
             // Set security-related headers
             $this->setSecurityHeaders();
 
@@ -233,13 +230,6 @@
          */
         public function bailOut(?int $statusCode = 400): never
         {
-            // Log the bailout
-            $this->errorLogger->warning('Bailing out', [
-                'status' => $statusCode,
-                'messages' => $this->globalMessages,
-                'errors' => $this->globalErrors,
-            ]);
-
             // Ensure that globalMessages and globalErrors are initialized as arrays
             $this->globalMessages = $this->globalMessages ?? [];
             $this->globalErrors = $this->globalErrors ?? [];
@@ -254,9 +244,7 @@
             $this->respond(
                 false, // failure
                 [],    // no data
-                $this->globalMessages, // messages
-                $this->globalErrors,   // errors
-                $statusCode            // response code
+                $statusCode // response code
             );
         }
         
