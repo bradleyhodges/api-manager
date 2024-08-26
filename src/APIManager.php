@@ -651,6 +651,174 @@ declare(strict_types=1);
 
             return $data;
         }
+
+        /**
+         * Validates and sanitizes the expected parameters from a given source (e.g., JSON, XML, POST, GET, REQUEST).
+         *
+         * @param string $uses The source of the parameters (e.g., JSON, XML, POST, GET, REQUEST).
+         * @param array $parameters The array of parameter rules to validate and sanitize.
+         * @param bool $handleResponse Determines whether to call handleContinuance() after adding errors.
+         * @return array The sanitized and validated parameters.
+         * 
+         * @example
+         * $validatedParams = $this->expectParameters('POST', [
+         *     [
+         *         'mandatory' => true,
+         *         'requires' => 'sessionId',
+         *         'name' => 'sessionId',
+         *         'format' => FILTER_VALIDATE_REGEXP,
+         *         'strictFormat' => true,
+         *         'sanitize' => true,
+         *         'descriptor' => 'Session ID',
+         *         'maxLength' => 32,
+         *         'options' => ['regexp' => '/^[a-f0-9]{32}$/i']
+         *     ]
+         * ], true);
+         */
+        public function expectParameters(string $uses, array $parameters, bool $handleResponse = true): array
+        {
+            $inputData = [];
+            $errors = [];
+            
+            // Determine the data source based on $uses
+            switch (strtoupper($uses)) {
+                case 'JSON':
+                    $inputData = $this->getJSONPayload(false);
+                    if (json_last_error() !== JSON_ERROR_NONE) {
+                        $this->apiResponseManager->addError([
+                            'status' => '400',
+                            'source' => ['pointer' => '/data'],
+                            'title' => 'Invalid JSON payload',
+                            'detail' => 'The JSON structure is invalid.',
+                        ]);
+                        $this->apiResponseManager->bailOut(400);
+                    }
+                    break;
+                case 'XML':
+                    $xmlContent = file_get_contents("php://input");
+                    if (!$xmlContent) {
+                        $this->apiResponseManager->addError([
+                            'status' => '400',
+                            'source' => ['pointer' => '/data'],
+                            'title' => 'Invalid XML payload',
+                            'detail' => 'Failed to read XML input.',
+                        ]);
+                        $this->apiResponseManager->bailOut(400);
+                    }
+                    $inputData = simplexml_load_string($xmlContent);
+                    if ($inputData === false) {
+                        $this->apiResponseManager->addError([
+                            'status' => '400',
+                            'source' => ['pointer' => '/data'],
+                            'title' => 'Invalid XML payload',
+                            'detail' => 'The XML structure is invalid.',
+                        ]);
+                        $this->apiResponseManager->bailOut(400);
+                    }
+                    break;
+                case 'POST':
+                    $inputData = $_POST;
+                    break;
+                case 'GET':
+                    $inputData = $_GET;
+                    break;
+                case 'REQUEST':
+                    $inputData = $_REQUEST;
+                    break;
+                default:
+                    $this->apiResponseManager->addError([
+                        'status' => '400',
+                        'source' => ['pointer' => '/data'],
+                        'title' => 'Unsupported data source',
+                        'detail' => "Unsupported data source: {$uses}",
+                    ]);
+                    $this->apiResponseManager->bailOut(400);
+            }
+            
+            // Loop through the parameters to validate and sanitize them
+            $result = [];
+            foreach ($parameters as $param) {
+                $mandatory = $param['mandatory'] ?? true;
+                $requires = $param['requires'] ?? null;
+                $name = $param['name'] ?? $requires;
+                $format = $param['format'] ?? null;
+                $strictFormat = $param['strictFormat'] ?? true;
+                $sanitize = $param['sanitize'] ?? true;
+                $descriptor = $param['descriptor'] ?? $name;
+                $maxLength = $param['maxLength'] ?? null;
+
+                // Create a dynamic JSON Pointer for the error source
+                $pointer = "/data/attributes/{$name}";
+
+                // Check if the required parameter exists in the input data
+                $value = $inputData[$requires] ?? null;
+
+                // Check for mandatory fields
+                if ($mandatory && $value === null) {
+                    $errors[] = [
+                        'status' => '400',  // Bad Request
+                        'source' => ['pointer' => $pointer],
+                        'title' => 'Missing Attribute',
+                        'detail' => "{$descriptor} must not be empty.",
+                    ];
+                    continue;
+                }
+
+                // If value is null and not mandatory, continue to the next parameter
+                if ($value === null) {
+                    $result[$name] = null;
+                    continue;
+                }
+
+                // Validate the format if a validation rule is provided
+                if ($format !== null) {
+                    if (is_string($format)) {
+                        if ($strictFormat && !preg_match($format, $value)) {
+                            $errors[] = [
+                                'status' => '422',  // Unprocessable Entity
+                                'source' => ['pointer' => $pointer],
+                                'title' => 'Invalid Format',
+                                'detail' => "{$descriptor} is not in the required format.",
+                            ];
+                            continue;
+                        }
+                    } elseif (is_int($format) && !filter_var($value, $format, $param['options'] ?? [])) {
+                        if ($strictFormat) {
+                            $errors[] = [
+                                'status' => '422',  // Unprocessable Entity
+                                'source' => ['pointer' => $pointer],
+                                'title' => 'Invalid Format',
+                                'detail' => "{$descriptor} is not in the required format.",
+                            ];
+                            continue;
+                        }
+                    }
+                }
+
+                // Sanitize the value if the sanitize flag is true and apply maxLength if specified
+                if ($sanitize) {
+                    $value = $this->sanitizeInput($value, $maxLength);
+                }
+
+                // Add the sanitized and validated value to the result array
+                $result[$name] = $value;
+            }
+
+            // Handle errors if there are any
+            if (!empty($errors)) {
+                foreach ($errors as $error) {
+                    $this->apiResponseManager->addError($error);
+                }
+
+                // Optionally handle response continuation if requested
+                if ($handleResponse) {
+                    $this->apiResponseManager->handleContinuance(400);
+                }
+            }
+
+            return $result;
+        }
+
         
         /**
          * Retrieves the response manager instance.
