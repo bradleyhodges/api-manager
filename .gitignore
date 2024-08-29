@@ -50,3 +50,9 @@ nodemon.json
 
 # Releases
 /releases/
+
+# Ignore build cache
+/build/
+
+# Ignore Docker files
+/.phpdoc/
