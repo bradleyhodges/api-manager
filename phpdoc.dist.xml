@@ -5,6 +5,8 @@
     xmlns="https://www.phpdoc.org"
     xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/phpDocumentor/phpDocumentor/master/phpDocumentor.xsd">
 
+    <title>bradleyhodges/api-manager</title>
+
     <paths>
         <output>docs</output>
         <cache>build/cache</cache>
