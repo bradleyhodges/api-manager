@@ -15,13 +15,13 @@
 
 ## Installation 🛠️
 
-Install the package via Composer:
+This package is published to [Packagist](https://packagist.org/packages/bradleyhodges/api-manager). Recommended installation is via Composer:
 
 ```bash
 composer require bradleyhodges/api-manager
 ```
 
-or you can manually add it to your `composer.json`:
+If you prefer to go cowboy and always have the latest version, you can also manually add it to your `composer.json`:
 
 ```json
 {
@@ -49,6 +49,10 @@ use APIManager\APIManager;
 // Initialize the APIManager
 $apiManager = new APIManager();
 ```
+
+### PHPDocs
+
+[Full documentation is available at https://bradleyhodges.github.io/api-manager](https://bradleyhodges.github.io/api-manager/classes/APIManager-APIManager.html). Alternatively, some common usage examples have been included below. I'll probably get around to uploading some examples at some point, but for now, this is the jazz.
 
 ### HTTP Client Usage 🌐
 
