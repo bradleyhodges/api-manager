@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"/>
+    <meta charset="utf-8"/>
+    <title>Documentation</title>
+    <meta name="author" content=""/>
+    <meta name="description" content=""/>
+    <base href="../">
+
+    <link href="css/bootstrap-combined.no-icons.min.css" rel="stylesheet">
+    <link href="css/font-awesome.min.css" rel="stylesheet">
+    <link href="css/prism.css" rel="stylesheet" media="all"/>
+    <link href="css/template.css" rel="stylesheet" media="all"/>
+    
+    <!--[if lt IE 9]>
+    <script src="js/html5.js"></script>
+    <![endif]-->
+    <script src="js/jquery-1.11.0.min.js"></script>
+    <script src="js/ui/1.10.4/jquery-ui.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/jquery.smooth-scroll.js"></script>
+    <script src="js/prism.min.js"></script>
+    <!-- TODO: Add http://jscrollpane.kelvinluck.com/ to style the scrollbars for browsers not using webkit-->
+    <script type="text/javascript">
+    function loadExternalCodeSnippets() {
+        Array.prototype.slice.call(document.querySelectorAll('pre[data-src]')).forEach(function (pre) {
+            var src = pre.getAttribute('data-src').replace( /\\/g, '/');
+            var extension = (src.match(/\.(\w+)$/) || [, ''])[1];
+            var language = 'php';
+
+            var code = document.createElement('code');
+            code.className = 'language-' + language;
+
+            pre.textContent = '';
+
+            code.textContent = 'Loading…';
+
+            pre.appendChild(code);
+
+            var xhr = new XMLHttpRequest();
+
+            xhr.open('GET', src, true);
+
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState == 4) {
+
+                    if (xhr.status < 400 && xhr.responseText) {
+                        code.textContent = xhr.responseText;
+
+                        Prism.highlightElement(code);
+                    }
+                    else if (xhr.status >= 400) {
+                        code.textContent = '✖ Error ' + xhr.status + ' while fetching file: ' + xhr.statusText;
+                    }
+                    else {
+                        code.textContent = '✖ Error: File does not exist, is empty or trying to view from localhost';
+                    }
+                }
+            };
+
+            xhr.send(null);
+        });
+    }
+
+    $(document).ready(function(){
+        loadExternalCodeSnippets();
+    });
+    $('#source-view').on('shown', function () {
+        loadExternalCodeSnippets();
+    })
+</script>
+
+    <link rel="shortcut icon" href="images/favicon.ico"/>
+    <link rel="apple-touch-icon" href="images/apple-touch-icon.png"/>
+    <link rel="apple-touch-icon" sizes="72x72" href="images/apple-touch-icon-72x72.png"/>
+    <link rel="apple-touch-icon" sizes="114x114" href="images/apple-touch-icon-114x114.png"/>
+</head>
+<body>
+
+<div class="navbar navbar-fixed-top">
+    <div class="navbar-inner">
+        <div class="container">
+            <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                <i class="icon-ellipsis-vertical"></i>
+            </a>
+            <a class="brand" href="index.html">Documentation</a>
+
+            <div class="nav-collapse">
+                <ul class="nav pull-right">
+                                        <li class="dropdown">
+                        <a href="index.html" class="dropdown-toggle" data-toggle="dropdown">
+                            API Documentation <b class="caret"></b>
+                        </a>
+                        <ul class="dropdown-menu">
+                                                        <li><a href="namespaces/apimanager.html"><abbr title="\APIManager">APIManager</abbr></a></li>
+                                                    </ul>
+                    </li>
+                                        <li class="dropdown" id="charts-menu">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                            Charts <b class="caret"></b>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a href="graphs/class.html">
+                                    <i class="icon-list-alt"></i>&#160;Class hierarchy diagram
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="dropdown" id="reports-menu">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                            Reports <b class="caret"></b>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a href="reports/errors.html">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <i class="icon-list-alt"></i>&#160;Errors <span class="label label-info pull-right">0</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="reports/markers.html">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <i class="icon-list-alt"></i>&#160;Markers <span class="label label-info pull-right">0</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="reports/deprecated.html">
+                                                                                                            <i class="icon-list-alt"></i>&#160;Deprecated <span class="label label-info pull-right">0</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <!--<div class="go_to_top">-->
+    <!--<a href="#___" style="color: inherit">Back to top&#160;&#160;<i class="icon-upload icon-white"></i></a>-->
+    <!--</div>-->
+</div>
+
+<div id="___" class="container-fluid">
+        <section class="row-fluid">
+        <div class="span2 sidebar">
+                                <div class="accordion" style="margin-bottom: 0">
+        <div class="accordion-group">
+            <div class="accordion-heading">
+                                    <a class="accordion-toggle " data-toggle="collapse" data-target="#namespace-421440459"></a>
+                                <a href="namespaces/default.html" style="margin-left: 30px; padding-left: 0">\</a>
+            </div>
+            <div id="namespace-421440459" class="accordion-body collapse in">
+                <div class="accordion-inner">
+
+                                                    <div class="accordion" style="margin-bottom: 0">
+        <div class="accordion-group">
+            <div class="accordion-heading">
+                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-92433672"></a>
+                                <a href="namespaces/apimanager.html" style="margin-left: 30px; padding-left: 0">APIManager</a>
+            </div>
+            <div id="namespace-92433672" class="accordion-body collapse ">
+                <div class="accordion-inner">
+
+                    
+                    <ul>
+                                                                                                    <li class="class"><a href="classes/APIManager-APIManager.html"><abbr title="\APIManager\APIManager">APIManager</abbr></a></li>
+                                                    <li class="class"><a href="classes/APIManager-ApiResponseManager.html"><abbr title="\APIManager\ApiResponseManager">ApiResponseManager</abbr></a></li>
+                                                    <li class="class"><a href="classes/APIManager-CORS.html"><abbr title="\APIManager\CORS">CORS</abbr></a></li>
+                                                    <li class="class"><a href="classes/APIManager-ErrorLogger.html"><abbr title="\APIManager\ErrorLogger">ErrorLogger</abbr></a></li>
+                                                    <li class="class"><a href="classes/APIManager-HTTP.html"><abbr title="\APIManager\HTTP">HTTP</abbr></a></li>
+                                            </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+                    
+                    <ul>
+                                                                                            </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        </div>
+    </section>
+    <section class="row-fluid">
+        <div class="span10 offset2">
+            <div class="row-fluid">
+                <div class="span8 content class">
+                    <nav>
+                                                <a href="namespaces/apimanager.html"><abbr title="\APIManager">APIManager</abbr></a> <i class="icon-level-up"></i>
+                                            </nav>
+                    
+                    <h1><small>\APIManager</small>ApiResponseManager</h1>
+                    <p><em>Class ApiResponseManager</em></p>
+                    <p>Manages global messages, errors, CORS, and handles API responses following JSON:API specification.
+Provides features for logging, security, validation, and robust error handling.</p>
+
+                    
+                                                                        <h3>Examples</h3>
+                                                                            <h4>$responseManager = new ApiResponseManager($corsHandler, $errorErrorLogger);
+$responseManager-&gt;addMessage(&quot;Operation successful.&quot;);
+$responseManager-&gt;respond(true, [&quot;type&quot; =&gt; &quot;success&quot;]);</h4>
+                            <pre class="pre-scrollable"></pre>
+                                                                
+                    <section id="summary">
+                        <h2>Summary</h2>
+                        <section class="row-fluid heading">
+                            <section class="span4">
+                                <a href="#methods">Methods</a>
+                            </section>
+                            <section class="span4">
+                                <a href="#properties">Properties</a>
+                            </section>
+                            <section class="span4">
+                                <a href="#constants">Constants</a>
+                            </section>
+                        </section>
+                        <section class="row-fluid public">
+                            <section class="span4">
+                                                                    <a href="classes/APIManager-ApiResponseManager.html#method___construct" class="">__construct()</a><br />
+                                                                    <a href="classes/APIManager-ApiResponseManager.html#method_setCORSHandler" class="">setCORSHandler()</a><br />
+                                                                    <a href="classes/APIManager-ApiResponseManager.html#method_addMessage" class="">addMessage()</a><br />
+                                                                    <a href="classes/APIManager-ApiResponseManager.html#method_addError" class="">addError()</a><br />
+                                                                    <a href="classes/APIManager-ApiResponseManager.html#method_handleCORS" class="">handleCORS()</a><br />
+                                                                    <a href="classes/APIManager-ApiResponseManager.html#method_sendEmptyResponse" class="">sendEmptyResponse()</a><br />
+                                                                    <a href="classes/APIManager-ApiResponseManager.html#method_respond" class="">respond()</a><br />
+                                                                    <a href="classes/APIManager-ApiResponseManager.html#method_bailOut" class="">bailOut()</a><br />
+                                                                    <a href="classes/APIManager-ApiResponseManager.html#method_canContinue" class="">canContinue()</a><br />
+                                                                    <a href="classes/APIManager-ApiResponseManager.html#method_handleContinuance" class="">handleContinuance()</a><br />
+                                                            </section>
+                            <section class="span4">
+                                                                    <a href="classes/APIManager-ApiResponseManager.html#property_cors" class="">$cors</a><br />
+                                                                    <a href="classes/APIManager-ApiResponseManager.html#property_globalMessages" class="">$globalMessages</a><br />
+                                                                    <a href="classes/APIManager-ApiResponseManager.html#property_globalErrors" class="">$globalErrors</a><br />
+                                                            </section>
+                            <section class="span4">
+                                                                    <em>No constants found</em>
+                                                            </section>
+                        </section>
+                        <section class="row-fluid protected">
+                            <section class="span4">
+                                                                    <em>No protected methods found</em>
+                                                            </section>
+                            <section class="span4">
+                                                                    <em>No protected properties found</em>
+                                                            </section>
+                            <section class="span4">
+                                <em>N/A</em>
+                            </section>
+                        </section>
+                        <section class="row-fluid private">
+                            <section class="span4">
+                                                                    <em>No private methods found</em>
+                                                            </section>
+                            <section class="span4">
+                                                                    <em>No private properties found</em>
+                                                            </section>
+                            <section class="span4">
+                                <em>N/A</em>
+                            </section>
+                        </section>
+                    </section>
+                </div>
+                <aside class="span4 detailsbar">
+                                        
+                    
+                    <dl>
+                        <dt>File</dt>
+                            <dd><a href="files/src-apiresponsemanager.html"><div class="path-wrapper">src/ApiResponseManager.php</div></a></dd>
+                                                <dt>Package</dt>
+                            <dd><div class="namespace-wrapper">APIManager</div></dd>
+                                                <dt>Class hierarchy</dt>
+                            <dd class="hierarchy">
+                                                                                                                                                                    <div class="namespace-wrapper">\APIManager\ApiResponseManager</div>
+                            </dd>
+
+                        
+                        
+                        
+                                                                                                            <dt>Uses</dt>
+                                                                                
+                                                                        </dl>
+                    <h2>Tags</h2>
+                    <table class="table table-condensed">
+                                            <tr><td colspan="2"><em>None found</em></td></tr>
+                                        </table>
+                </aside>
+            </div>
+
+                        
+                                    <a id="properties" name="properties"></a>
+            <div class="row-fluid">
+                <div class="span8 content class">
+                    <h2>Properties</h2>
+                </div>
+                <aside class="span4 detailsbar"></aside>
+            </div>
+
+                                    <div class="row-fluid">
+        <div class="span8 content class">
+            <a id="property_cors" name="property_cors" class="anchor"></a>
+            <article class="property">
+                <h3 class="public ">$cors</h3>
+                <pre class="signature">$cors
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+</pre>
+                <p><em></em></p>
+                
+
+                
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+            </article>
+        </div>
+        <aside class="span4 detailsbar">
+            <h1><i class="icon-arrow-down"></i></h1>
+                        <dl>
+                                                                                            <dt>Uses</dt>
+                                                                    </dl>
+            <h2>Tags</h2>
+            <table class="table table-condensed">
+                                    <tr><td colspan="2"><em>None found</em></td></tr>
+                            </table>
+        </aside>
+    </div>
+
+                                    <div class="row-fluid">
+        <div class="span8 content class">
+            <a id="property_globalMessages" name="property_globalMessages" class="anchor"></a>
+            <article class="property">
+                <h3 class="public ">$globalMessages</h3>
+                <pre class="signature">$globalMessages
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+ : 
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+string[]</pre>
+                <p><em>Array to store global messages.</em></p>
+                
+
+                
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+                <h4>Type</h4>
+                
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+string[]
+                &mdash;                             </article>
+        </div>
+        <aside class="span4 detailsbar">
+            <h1><i class="icon-arrow-down"></i></h1>
+                        <dl>
+                                                                                            <dt>Uses</dt>
+                                                                    </dl>
+            <h2>Tags</h2>
+            <table class="table table-condensed">
+                                    <tr><td colspan="2"><em>None found</em></td></tr>
+                            </table>
+        </aside>
+    </div>
+
+                                    <div class="row-fluid">
+        <div class="span8 content class">
+            <a id="property_globalErrors" name="property_globalErrors" class="anchor"></a>
+            <article class="property">
+                <h3 class="public ">$globalErrors</h3>
+                <pre class="signature">$globalErrors
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+ : 
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+string[]</pre>
+                <p><em>Array to store global errors.</em></p>
+                
+
+                
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+                <h4>Type</h4>
+                
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+string[]
+                &mdash;                             </article>
+        </div>
+        <aside class="span4 detailsbar">
+            <h1><i class="icon-arrow-down"></i></h1>
+                        <dl>
+                                                                                            <dt>Uses</dt>
+                                                                    </dl>
+            <h2>Tags</h2>
+            <table class="table table-condensed">
+                                    <tr><td colspan="2"><em>None found</em></td></tr>
+                            </table>
+        </aside>
+    </div>
+
+                                                            
+                                    <a id="methods" name="methods"></a>
+            <div class="row-fluid">
+                <div class="span8 content class"><h2>Methods</h2></div>
+                <aside class="span4 detailsbar"></aside>
+            </div>
+
+                                    <div class="row-fluid">
+        <div class="span8 content class">
+            <a id="method___construct" name="method___construct" class="anchor"></a>
+            <article class="method">
+                <h3 class="public ">__construct()</h3>
+                <a href="#source-view" role="button" class="pull-right btn" data-toggle="modal" style="font-size: 1.1em; padding: 9px 14px"><i class="icon-code"></i></a>
+                <pre class="signature" style="margin-right: 54px;">__construct(
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+\APIManager\ErrorLogger  <span class="argument">$errorLogger</span>, 
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+\APIManager\APIManager  <span class="argument">$apiManager</span>) 
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+: mixed</pre>
+                <p><em>ApiResponseManager constructor.</em></p>
+                <p>Initializes the response manager with an error logger and API manager instance.</p>
+
+
+                                    <h4>Parameters</h4>
+                    <table class="table table-condensed table-hover">
+                                                    <tr>
+                                <td>
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+\APIManager\ErrorLogger</td>
+                                <td>$errorLogger </td>
+                                <td><p>The logger instance to use for error logging.</p>
+</td>
+                            </tr>
+                                                    <tr>
+                                <td>
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+\APIManager\APIManager</td>
+                                <td>$apiManager </td>
+                                <td><p>The API manager instance to use for API operations.</p>
+</td>
+                            </tr>
+                                            </table>
+                
+                
+                
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+                    <h4>Returns</h4>
+                    
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+mixed
+                                            &mdash; 
+                                    
+                            </article>
+        </div>
+        <aside class="span4 detailsbar">
+            <h1><i class="icon-arrow-down"></i></h1>
+                                                            <dl>
+                                                    <dt>Inherited from</dt>
+                    <dd><a href="classes/APIManager-ApiResponseManager.html"><div class="path-wrapper">\APIManager\ApiResponseManager</div></a></dd>
+                                                                                            <dt>Uses</dt>
+                                                                    </dl>
+            <h2>Tags</h2>
+            <table class="table table-condensed">
+                                    <tr><td colspan="2"><em>None found</em></td></tr>
+                            </table>
+        </aside>
+    </div>
+
+                                    <div class="row-fluid">
+        <div class="span8 content class">
+            <a id="method_setCORSHandler" name="method_setCORSHandler" class="anchor"></a>
+            <article class="method">
+                <h3 class="public ">setCORSHandler()</h3>
+                <a href="#source-view" role="button" class="pull-right btn" data-toggle="modal" style="font-size: 1.1em; padding: 9px 14px"><i class="icon-code"></i></a>
+                <pre class="signature" style="margin-right: 54px;">setCORSHandler(
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+\APIManager\CORS  <span class="argument">$cors</span>) 
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+: void</pre>
+                <p><em>Sets the CORS handler instance to use for handling CORS requests.</em></p>
+                
+
+                                    <h4>Parameters</h4>
+                    <table class="table table-condensed table-hover">
+                                                    <tr>
+                                <td>
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+\APIManager\CORS</td>
+                                <td>$cors </td>
+                                <td><p>The CORS handler instance to use.</p>
+</td>
+                            </tr>
+                                            </table>
+                
+                
+                
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+                            </article>
+        </div>
+        <aside class="span4 detailsbar">
+            <h1><i class="icon-arrow-down"></i></h1>
+                                                            <dl>
+                                                    <dt>Inherited from</dt>
+                    <dd><a href="classes/APIManager-ApiResponseManager.html"><div class="path-wrapper">\APIManager\ApiResponseManager</div></a></dd>
+                                                                                            <dt>Uses</dt>
+                                                                    </dl>
+            <h2>Tags</h2>
+            <table class="table table-condensed">
+                                    <tr><td colspan="2"><em>None found</em></td></tr>
+                            </table>
+        </aside>
+    </div>
+
+                                    <div class="row-fluid">
+        <div class="span8 content class">
+            <a id="method_addMessage" name="method_addMessage" class="anchor"></a>
+            <article class="method">
+                <h3 class="public ">addMessage()</h3>
+                <a href="#source-view" role="button" class="pull-right btn" data-toggle="modal" style="font-size: 1.1em; padding: 9px 14px"><i class="icon-code"></i></a>
+                <pre class="signature" style="margin-right: 54px;">addMessage(
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+string|array  <span class="argument">$message</span>) 
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+: void</pre>
+                <p><em>Adds a message to the global messages array.</em></p>
+                
+
+                                    <h4>Parameters</h4>
+                    <table class="table table-condensed table-hover">
+                                                    <tr>
+                                <td>
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+string|array</td>
+                                <td>$message </td>
+                                <td><p>The message to add. It can be either a string or an array.</p>
+</td>
+                            </tr>
+                                            </table>
+                
+                
+                
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+                                                            <h4>Examples</h4>
+                                                                <h5>$responseManager-&gt;addMessage(&quot;Operation successful.&quot;);</h5>
+                        <pre class="pre-scrollable"></pre>
+                                                </article>
+        </div>
+        <aside class="span4 detailsbar">
+            <h1><i class="icon-arrow-down"></i></h1>
+                                                            <dl>
+                                                    <dt>Inherited from</dt>
+                    <dd><a href="classes/APIManager-ApiResponseManager.html"><div class="path-wrapper">\APIManager\ApiResponseManager</div></a></dd>
+                                                                                            <dt>Uses</dt>
+                                                                    </dl>
+            <h2>Tags</h2>
+            <table class="table table-condensed">
+                                    <tr><td colspan="2"><em>None found</em></td></tr>
+                            </table>
+        </aside>
+    </div>
+
+                                    <div class="row-fluid">
+        <div class="span8 content class">
+            <a id="method_addError" name="method_addError" class="anchor"></a>
+            <article class="method">
+                <h3 class="public ">addError()</h3>
+                <a href="#source-view" role="button" class="pull-right btn" data-toggle="modal" style="font-size: 1.1em; padding: 9px 14px"><i class="icon-code"></i></a>
+                <pre class="signature" style="margin-right: 54px;">addError(
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+array  <span class="argument">$error</span>) 
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+: void</pre>
+                <p><em>Adds an error to the global errors array.</em></p>
+                
+
+                                    <h4>Parameters</h4>
+                    <table class="table table-condensed table-hover">
+                                                    <tr>
+                                <td>
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+array</td>
+                                <td>$error </td>
+                                <td><p>The error to add, consistent with JSON:API specification.</p>
+</td>
+                            </tr>
+                                            </table>
+                
+                
+                
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+                                                            <h4>Examples</h4>
+                                                                <h5>$responseManager-&gt;addError([&#039;status&#039; =&gt; &#039;400&#039;, &#039;title&#039; =&gt; &#039;Bad Request&#039;, &#039;detail&#039; =&gt; &#039;Invalid input.&#039;]);</h5>
+                        <pre class="pre-scrollable"></pre>
+                                            <h5>$responseManager-&gt;addError([&#039;status&#039; =&gt; &#039;500&#039;, &#039;title&#039; =&gt; &#039;Internal Server Error&#039;, &#039;detail&#039; =&gt; &#039;An unexpected error occurred.&#039;]);</h5>
+                        <pre class="pre-scrollable"></pre>
+                                                </article>
+        </div>
+        <aside class="span4 detailsbar">
+            <h1><i class="icon-arrow-down"></i></h1>
+                                                            <dl>
+                                                    <dt>Inherited from</dt>
+                    <dd><a href="classes/APIManager-ApiResponseManager.html"><div class="path-wrapper">\APIManager\ApiResponseManager</div></a></dd>
+                                                                                            <dt>Uses</dt>
+                                                                    </dl>
+            <h2>Tags</h2>
+            <table class="table table-condensed">
+                                    <tr><td colspan="2"><em>None found</em></td></tr>
+                            </table>
+        </aside>
+    </div>
+
+                                    <div class="row-fluid">
+        <div class="span8 content class">
+            <a id="method_handleCORS" name="method_handleCORS" class="anchor"></a>
+            <article class="method">
+                <h3 class="public ">handleCORS()</h3>
+                <a href="#source-view" role="button" class="pull-right btn" data-toggle="modal" style="font-size: 1.1em; padding: 9px 14px"><i class="icon-code"></i></a>
+                <pre class="signature" style="margin-right: 54px;">handleCORS(
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+array|null  <span class="argument">$allowedOrigins = null</span>, 
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+bool  <span class="argument">$allowCredentials = false</span>, 
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+array  <span class="argument">$allowedMethods = [&#039;GET&#039;, &#039;POST&#039;, &#039;OPTIONS&#039;]</span>, 
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+array  <span class="argument">$allowedHeaders = [&#039;Content-Type&#039;, &#039;Authorization&#039;]</span>, 
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+array  <span class="argument">$exposedHeaders = []</span>, 
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+int  <span class="argument">$maxAge = 86400</span>) 
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+: void</pre>
+                <p><em>Handles CORS for the current request using the configured CORS handler.</em></p>
+                <p>This method should be called at the start of any request handling.</p>
+
+
+                                    <h4>Parameters</h4>
+                    <table class="table table-condensed table-hover">
+                                                    <tr>
+                                <td>
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+array|null</td>
+                                <td>$allowedOrigins </td>
+                                <td><p>Allowed origins for CORS.</p>
+</td>
+                            </tr>
+                                                    <tr>
+                                <td>
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+bool</td>
+                                <td>$allowCredentials </td>
+                                <td><p>Whether to allow credentials in CORS requests.</p>
+</td>
+                            </tr>
+                                                    <tr>
+                                <td>
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+array</td>
+                                <td>$allowedMethods </td>
+                                <td><p>Allowed HTTP methods.</p>
+</td>
+                            </tr>
+                                                    <tr>
+                                <td>
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+array</td>
+                                <td>$allowedHeaders </td>
+                                <td><p>Allowed headers in CORS requests.</p>
+</td>
+                            </tr>
+                                                    <tr>
+                                <td>
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+array</td>
+                                <td>$exposedHeaders </td>
+                                <td><p>Exposed headers in CORS responses.</p>
+</td>
+                            </tr>
+                                                    <tr>
+                                <td>
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+int</td>
+                                <td>$maxAge </td>
+                                <td><p>Max age for preflight cache.</p>
+</td>
+                            </tr>
+                                            </table>
+                
+                
+                
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+                            </article>
+        </div>
+        <aside class="span4 detailsbar">
+            <h1><i class="icon-arrow-down"></i></h1>
+                                                            <dl>
+                                                    <dt>Inherited from</dt>
+                    <dd><a href="classes/APIManager-ApiResponseManager.html"><div class="path-wrapper">\APIManager\ApiResponseManager</div></a></dd>
+                                                                                            <dt>Uses</dt>
+                                                                    </dl>
+            <h2>Tags</h2>
+            <table class="table table-condensed">
+                                    <tr><td colspan="2"><em>None found</em></td></tr>
+                            </table>
+        </aside>
+    </div>
+
+                                    <div class="row-fluid">
+        <div class="span8 content class">
+            <a id="method_sendEmptyResponse" name="method_sendEmptyResponse" class="anchor"></a>
+            <article class="method">
+                <h3 class="public ">sendEmptyResponse()</h3>
+                <a href="#source-view" role="button" class="pull-right btn" data-toggle="modal" style="font-size: 1.1em; padding: 9px 14px"><i class="icon-code"></i></a>
+                <pre class="signature" style="margin-right: 54px;">sendEmptyResponse(
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+int  <span class="argument">$statusCode = 204</span>) 
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+: never</pre>
+                <p><em>Responds to the client with an empty response (no content).</em></p>
+                
+
+                                    <h4>Parameters</h4>
+                    <table class="table table-condensed table-hover">
+                                                    <tr>
+                                <td>
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+int</td>
+                                <td>$statusCode </td>
+                                <td><p>The HTTP status code for the response. Defaults to 204 (No Content).</p>
+</td>
+                            </tr>
+                                            </table>
+                
+                
+                
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+                    <h4>Returns</h4>
+                    
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+never
+                                            &mdash; 
+                                    
+                                                            <h4>Examples</h4>
+                                                                <h5>$responseManager-&gt;sendEmptyResponse(204);</h5>
+                        <pre class="pre-scrollable"></pre>
+                                                </article>
+        </div>
+        <aside class="span4 detailsbar">
+            <h1><i class="icon-arrow-down"></i></h1>
+                                                            <dl>
+                                                    <dt>Inherited from</dt>
+                    <dd><a href="classes/APIManager-ApiResponseManager.html"><div class="path-wrapper">\APIManager\ApiResponseManager</div></a></dd>
+                                                                                            <dt>Uses</dt>
+                                                                    </dl>
+            <h2>Tags</h2>
+            <table class="table table-condensed">
+                                    <tr><td colspan="2"><em>None found</em></td></tr>
+                            </table>
+        </aside>
+    </div>
+
+                                    <div class="row-fluid">
+        <div class="span8 content class">
+            <a id="method_respond" name="method_respond" class="anchor"></a>
+            <article class="method">
+                <h3 class="public ">respond()</h3>
+                <a href="#source-view" role="button" class="pull-right btn" data-toggle="modal" style="font-size: 1.1em; padding: 9px 14px"><i class="icon-code"></i></a>
+                <pre class="signature" style="margin-right: 54px;">respond(
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+bool  <span class="argument">$success = true</span>, 
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+array&lt;string,mixed&gt;  <span class="argument">$data = []</span>, 
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+int|null  <span class="argument">$statusCode = null</span>, 
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+string[]|null  <span class="argument">$messages = null</span>, 
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+string[]|null  <span class="argument">$errors = null</span>) 
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+: never</pre>
+                <p><em>Responds to the client with a JSON-encoded response following JSON:API spec.</em></p>
+                
+
+                                    <h4>Parameters</h4>
+                    <table class="table table-condensed table-hover">
+                                                    <tr>
+                                <td>
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+bool</td>
+                                <td>$success </td>
+                                <td><p>Indicates whether the response represents a successful outcome.</p>
+</td>
+                            </tr>
+                                                    <tr>
+                                <td>
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+array<string,mixed></td>
+                                <td>$data </td>
+                                <td><p>The data to include in the response, compliant with JSON:API.</p>
+</td>
+                            </tr>
+                                                    <tr>
+                                <td>
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+int|null</td>
+                                <td>$statusCode </td>
+                                <td><p>The HTTP status code for the response.</p>
+</td>
+                            </tr>
+                                                    <tr>
+                                <td>
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+string[]|null</td>
+                                <td>$messages </td>
+                                <td><p>An optional array of messages to include in the response.</p>
+</td>
+                            </tr>
+                                                    <tr>
+                                <td>
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+string[]|null</td>
+                                <td>$errors </td>
+                                <td><p>An optional array of errors to include in the response.</p>
+</td>
+                            </tr>
+                                            </table>
+                
+                
+                
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+                    <h4>Returns</h4>
+                    
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+never
+                                            &mdash; 
+                                    
+                            </article>
+        </div>
+        <aside class="span4 detailsbar">
+            <h1><i class="icon-arrow-down"></i></h1>
+                                                            <dl>
+                                                    <dt>Inherited from</dt>
+                    <dd><a href="classes/APIManager-ApiResponseManager.html"><div class="path-wrapper">\APIManager\ApiResponseManager</div></a></dd>
+                                                                                            <dt>Uses</dt>
+                                                                    </dl>
+            <h2>Tags</h2>
+            <table class="table table-condensed">
+                                    <tr><td colspan="2"><em>None found</em></td></tr>
+                            </table>
+        </aside>
+    </div>
+
+                                    <div class="row-fluid">
+        <div class="span8 content class">
+            <a id="method_bailOut" name="method_bailOut" class="anchor"></a>
+            <article class="method">
+                <h3 class="public ">bailOut()</h3>
+                <a href="#source-view" role="button" class="pull-right btn" data-toggle="modal" style="font-size: 1.1em; padding: 9px 14px"><i class="icon-code"></i></a>
+                <pre class="signature" style="margin-right: 54px;">bailOut(
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+int|null  <span class="argument">$statusCode = 400</span>) 
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+: never</pre>
+                <p><em>Bail out and respond to the client with a failure response.</em></p>
+                <p>This method is useful when you need to stop the execution and respond with an error.</p>
+
+
+                                    <h4>Parameters</h4>
+                    <table class="table table-condensed table-hover">
+                                                    <tr>
+                                <td>
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+int|null</td>
+                                <td>$statusCode </td>
+                                <td><p>The HTTP status code for the response. Defaults to 400.</p>
+</td>
+                            </tr>
+                                            </table>
+                
+                
+                
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+                    <h4>Returns</h4>
+                    
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+never
+                                            &mdash; 
+                                    
+                            </article>
+        </div>
+        <aside class="span4 detailsbar">
+            <h1><i class="icon-arrow-down"></i></h1>
+                                                            <dl>
+                                                    <dt>Inherited from</dt>
+                    <dd><a href="classes/APIManager-ApiResponseManager.html"><div class="path-wrapper">\APIManager\ApiResponseManager</div></a></dd>
+                                                                                            <dt>Uses</dt>
+                                                                    </dl>
+            <h2>Tags</h2>
+            <table class="table table-condensed">
+                                    <tr><td colspan="2"><em>None found</em></td></tr>
+                            </table>
+        </aside>
+    </div>
+
+                                    <div class="row-fluid">
+        <div class="span8 content class">
+            <a id="method_canContinue" name="method_canContinue" class="anchor"></a>
+            <article class="method">
+                <h3 class="public ">canContinue()</h3>
+                <a href="#source-view" role="button" class="pull-right btn" data-toggle="modal" style="font-size: 1.1em; padding: 9px 14px"><i class="icon-code"></i></a>
+                <pre class="signature" style="margin-right: 54px;">canContinue() 
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+: bool</pre>
+                <p><em>Checks if the response can continue based on the global errors array.</em></p>
+                
+
+                
+                
+                
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+                    <h4>Returns</h4>
+                    
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+bool
+                                            &mdash; <p>Whether the response can continue.</p>
+
+                                    
+                            </article>
+        </div>
+        <aside class="span4 detailsbar">
+            <h1><i class="icon-arrow-down"></i></h1>
+                                                            <dl>
+                                                    <dt>Inherited from</dt>
+                    <dd><a href="classes/APIManager-ApiResponseManager.html"><div class="path-wrapper">\APIManager\ApiResponseManager</div></a></dd>
+                                                                                            <dt>Uses</dt>
+                                                                    </dl>
+            <h2>Tags</h2>
+            <table class="table table-condensed">
+                                    <tr><td colspan="2"><em>None found</em></td></tr>
+                            </table>
+        </aside>
+    </div>
+
+                                    <div class="row-fluid">
+        <div class="span8 content class">
+            <a id="method_handleContinuance" name="method_handleContinuance" class="anchor"></a>
+            <article class="method">
+                <h3 class="public ">handleContinuance()</h3>
+                <a href="#source-view" role="button" class="pull-right btn" data-toggle="modal" style="font-size: 1.1em; padding: 9px 14px"><i class="icon-code"></i></a>
+                <pre class="signature" style="margin-right: 54px;">handleContinuance(
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+int|null  <span class="argument">$statusCode = 400</span>) 
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+: void</pre>
+                <p><em>Handles continuance based on the presence of errors.</em></p>
+                <p>If there are errors present, the script will bail out with the provided status code.</p>
+
+
+                                    <h4>Parameters</h4>
+                    <table class="table table-condensed table-hover">
+                                                    <tr>
+                                <td>
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+int|null</td>
+                                <td>$statusCode </td>
+                                <td><p>The HTTP status code to use when bailing out. Defaults to 400.</p>
+</td>
+                            </tr>
+                                            </table>
+                
+                
+                
+Deprecated: Please use getType in /opt/phpdoc/src/phpDocumentor/Descriptor/Traits/CanHaveAType.php on line 50
+
+                            </article>
+        </div>
+        <aside class="span4 detailsbar">
+            <h1><i class="icon-arrow-down"></i></h1>
+                                                            <dl>
+                                                    <dt>Inherited from</dt>
+                    <dd><a href="classes/APIManager-ApiResponseManager.html"><div class="path-wrapper">\APIManager\ApiResponseManager</div></a></dd>
+                                                                                            <dt>Uses</dt>
+                                                                    </dl>
+            <h2>Tags</h2>
+            <table class="table table-condensed">
+                                    <tr><td colspan="2"><em>None found</em></td></tr>
+                            </table>
+        </aside>
+    </div>
+
+                                                                    </div>
+    </section>
+
+    <div id="source-view" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="source-view-label" aria-hidden="true">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+            <h3 id="source-view-label">ApiResponseManager.php</h3>
+        </div>
+        <div class="modal-body">
+            <pre data-src="files/src/ApiResponseManager.php.txt" class="language-php line-numbers"></pre>
+        </div>
+    </div>
+
+    <footer class="row-fluid">
+        <section class="span10 offset2">
+            <section class="row-fluid">
+                <section class="span10 offset1">
+                    <section class="row-fluid footer-sections">
+                        <section class="span4">
+                                                        <h1><i class="icon-code"></i></h1>
+                            <div>
+                                <ul>
+                                                                            <li><a href="namespaces/apimanager.html"><abbr title="\APIManager">APIManager</abbr></a></li>
+                                                                    </ul>
+                            </div>
+                        </section>
+                        <section class="span4">
+                                                        <h1><i class="icon-bar-chart"></i></h1>
+                            <div>
+                                <ul>
+                                    <li><a href="graphs/class.html">Class Hierarchy Diagram</a></li>
+                                </ul>
+                            </div>
+                        </section>
+                        <section class="span4">
+                                                        <h1><i class="icon-pushpin"></i></h1>
+                            <div>
+                                <ul>
+                                    <li><a href="reports/errors.html">Errors</a></li>
+                                    <li><a href="reports/markers.html">Markers</a></li>
+                                </ul>
+                            </div>
+                        </section>
+                    </section>
+                </section>
+            </section>
+            <section class="row-fluid">
+                <section class="span10 offset1">
+                    <hr />
+                    Documentation is powered by <a href="https://www.phpdoc.org/">phpDocumentor </a> and authored
+                    on August 29th, 2024 at 01:06.
+                </section>
+            </section>
+        </section>
+    </footer>
+</div>
+
+</body>
+</html>
