@@ -28,7 +28,7 @@ or you can manually add it to your `composer.json`:
     "repositories": [
       {
         "type": "vcs",
-        "url": "https://github.com/dfes-ses/api-manager.git"
+        "url": "https://github.com/bradleyhodges/api-manager.git"
       }
     ],
     "require": {
