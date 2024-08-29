@@ -33,6 +33,4 @@
             </markers>
         </api>
     </version>
-
-    <template name="clean"/>
 </phpdocumentor>
