@@ -43,7 +43,7 @@ phpunit.xml
 phpunit.xml.dist
 
 # Linting and testing configuration files
-/linting/
+/linting/vendor/
 phpstan.neon
 nodemon.json
 .deployignore

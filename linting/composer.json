@@ -6,7 +6,8 @@
   "config": {
     "process-timeout": 1800,
     "allow-plugins": {
-      "phpstan/extension-installer": true
+      "phpstan/extension-installer": true,
+      "symfony/flex": true
     }
   },
   "require-dev": {

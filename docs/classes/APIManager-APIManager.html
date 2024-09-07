@@ -541,9 +541,9 @@ secure framework for API-driven applications.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/APIManager.php"><a href="files/src-apimanager.html"><abbr title="src/APIManager.php">APIManager.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">980</span>
+    <span class="phpdocumentor-element-found-in__line">993</span>
 
-            <a href="classes/APIManager-APIManager.html#source-view.980" class="phpdocumentor-element-found-in__source" data-line="980" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
+            <a href="classes/APIManager-APIManager.html#source-view.993" class="phpdocumentor-element-found-in__source" data-line="993" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
     </aside>
 
         <p class="phpdocumentor-summary">Decodes a JSON string into a PHP array with error handling.</p>
@@ -616,9 +616,9 @@ secure framework for API-driven applications.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/APIManager.php"><a href="files/src-apimanager.html"><abbr title="src/APIManager.php">APIManager.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1003</span>
+    <span class="phpdocumentor-element-found-in__line">1016</span>
 
-            <a href="classes/APIManager-APIManager.html#source-view.1003" class="phpdocumentor-element-found-in__source" data-line="1003" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
+            <a href="classes/APIManager-APIManager.html#source-view.1016" class="phpdocumentor-element-found-in__source" data-line="1016" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
     </aside>
 
         <p class="phpdocumentor-summary">Encodes a PHP array into a JSON string with error handling.</p>
@@ -752,16 +752,16 @@ secure framework for API-driven applications.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/APIManager.php"><a href="files/src-apimanager.html"><abbr title="src/APIManager.php">APIManager.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">678</span>
+    <span class="phpdocumentor-element-found-in__line">691</span>
 
-            <a href="classes/APIManager-APIManager.html#source-view.678" class="phpdocumentor-element-found-in__source" data-line="678" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
+            <a href="classes/APIManager-APIManager.html#source-view.691" class="phpdocumentor-element-found-in__source" data-line="691" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
     </aside>
 
         <p class="phpdocumentor-summary">Validates and sanitizes the expected parameters from a given source (e.g., JSON, XML, POST, GET, REQUEST).</p>
 
     <code class="phpdocumentor-code phpdocumentor-signature ">
     <span class="phpdocumentor-signature__visibility">public</span>
-                    <span class="phpdocumentor-signature__name">expectParameters</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__return-type">string&nbsp;</span><span class="phpdocumentor-signature__argument__name">$uses</span></span><span class="phpdocumentor-signature__argument"><span>, </span><span class="phpdocumentor-signature__argument__return-type">array&lt;string|int, mixed&gt;&nbsp;</span><span class="phpdocumentor-signature__argument__name">$parameters</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__return-type">bool&nbsp;</span><span class="phpdocumentor-signature__argument__name">$handleResponse</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">true</span><span> ]</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">array&lt;string|int, mixed&gt;</span></code>
+                    <span class="phpdocumentor-signature__name">expectParameters</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__return-type">string&nbsp;</span><span class="phpdocumentor-signature__argument__name">$uses</span></span><span class="phpdocumentor-signature__argument"><span>, </span><span class="phpdocumentor-signature__argument__return-type">array&lt;string|int, array&lt;string|int, mixed&gt;&gt;&nbsp;</span><span class="phpdocumentor-signature__argument__name">$parameters</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__return-type">bool&nbsp;</span><span class="phpdocumentor-signature__argument__name">$handleResponse</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">true</span><span> ]</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">array&lt;string|int, mixed&gt;</span></code>
 
     <div class="phpdocumentor-label-line">
         </div>
@@ -780,10 +780,22 @@ secure framework for API-driven applications.</p>
             </dd>
                     <dt class="phpdocumentor-argument-list__entry">
                 <span class="phpdocumentor-signature__argument__name">$parameters</span>
-                : <span class="phpdocumentor-signature__argument__return-type">array&lt;string|int, mixed&gt;</span>
+                : <span class="phpdocumentor-signature__argument__return-type">array&lt;string|int, array&lt;string|int, mixed&gt;&gt;</span>
                             </dt>
             <dd class="phpdocumentor-argument-list__definition">
                     <section class="phpdocumentor-description"><p>The array of parameter rules to validate and sanitize.</p>
+<p>Each parameter rule array should contain the following keys:</p>
+<ul>
+<li>'mandatory' (bool): Whether the parameter is required (default: true).</li>
+<li>'requires' (string): The key in the input data to validate.</li>
+<li>'name' (string): The name of the parameter (default: value of 'requires').</li>
+<li>'format' (int|string|null): The validation format (FILTER_VALIDATE constant or regex string, optional).</li>
+<li>'strictFormat' (bool): Whether to strictly enforce the format (default: true).</li>
+<li>'sanitize' (bool): Whether to sanitize the input (default: true).</li>
+<li>'descriptor' (string): A human-readable name for the parameter (default: value of 'name').</li>
+<li>'maxLength' (int|null): The maximum length allowed for the input (optional).</li>
+<li>'options' (array): Additional options for filters (e.g., ['regexp' =&gt; 'regex pattern'], default: empty array).</li>
+</ul>
 </section>
 
             </dd>
@@ -854,9 +866,9 @@ secure framework for API-driven applications.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/APIManager.php"><a href="files/src-apimanager.html"><abbr title="src/APIManager.php">APIManager.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">934</span>
+    <span class="phpdocumentor-element-found-in__line">947</span>
 
-            <a href="classes/APIManager-APIManager.html#source-view.934" class="phpdocumentor-element-found-in__source" data-line="934" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
+            <a href="classes/APIManager-APIManager.html#source-view.947" class="phpdocumentor-element-found-in__source" data-line="947" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
     </aside>
 
         <p class="phpdocumentor-summary">Retrieves the initialized CSRF token manager.</p>
@@ -900,9 +912,9 @@ secure framework for API-driven applications.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/APIManager.php"><a href="files/src-apimanager.html"><abbr title="src/APIManager.php">APIManager.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1058</span>
+    <span class="phpdocumentor-element-found-in__line">1071</span>
 
-            <a href="classes/APIManager-APIManager.html#source-view.1058" class="phpdocumentor-element-found-in__source" data-line="1058" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
+            <a href="classes/APIManager-APIManager.html#source-view.1071" class="phpdocumentor-element-found-in__source" data-line="1071" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
     </aside>
 
         <p class="phpdocumentor-summary">Retrieves JSON payload from the request body and decodes it into a PHP array.</p>
@@ -1085,9 +1097,9 @@ secure framework for API-driven applications.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/APIManager.php"><a href="files/src-apimanager.html"><abbr title="src/APIManager.php">APIManager.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1034</span>
+    <span class="phpdocumentor-element-found-in__line">1047</span>
 
-            <a href="classes/APIManager-APIManager.html#source-view.1034" class="phpdocumentor-element-found-in__source" data-line="1034" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
+            <a href="classes/APIManager-APIManager.html#source-view.1047" class="phpdocumentor-element-found-in__source" data-line="1047" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
     </aside>
 
         <p class="phpdocumentor-summary">Retrieves sanitized input from the $_GET superglobal.</p>
@@ -1141,9 +1153,9 @@ secure framework for API-driven applications.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/APIManager.php"><a href="files/src-apimanager.html"><abbr title="src/APIManager.php">APIManager.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1045</span>
+    <span class="phpdocumentor-element-found-in__line">1058</span>
 
-            <a href="classes/APIManager-APIManager.html#source-view.1045" class="phpdocumentor-element-found-in__source" data-line="1045" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
+            <a href="classes/APIManager-APIManager.html#source-view.1058" class="phpdocumentor-element-found-in__source" data-line="1058" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
     </aside>
 
         <p class="phpdocumentor-summary">Retrieves sanitized input from the $_POST superglobal.</p>
@@ -1382,9 +1394,9 @@ with a JSON error message.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/APIManager.php"><a href="files/src-apimanager.html"><abbr title="src/APIManager.php">APIManager.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1019</span>
+    <span class="phpdocumentor-element-found-in__line">1032</span>
 
-            <a href="classes/APIManager-APIManager.html#source-view.1019" class="phpdocumentor-element-found-in__source" data-line="1019" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
+            <a href="classes/APIManager-APIManager.html#source-view.1032" class="phpdocumentor-element-found-in__source" data-line="1032" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
     </aside>
 
         <p class="phpdocumentor-summary">Checks if a given string is a valid JSON.</p>
@@ -1486,9 +1498,9 @@ with a JSON error message.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/APIManager.php"><a href="files/src-apimanager.html"><abbr title="src/APIManager.php">APIManager.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">846</span>
+    <span class="phpdocumentor-element-found-in__line">859</span>
 
-            <a href="classes/APIManager-APIManager.html#source-view.846" class="phpdocumentor-element-found-in__source" data-line="846" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
+            <a href="classes/APIManager-APIManager.html#source-view.859" class="phpdocumentor-element-found-in__source" data-line="859" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
     </aside>
 
         <p class="phpdocumentor-summary">Securely requires a file.</p>
@@ -1563,9 +1575,9 @@ or if the file does not exist.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/APIManager.php"><a href="files/src-apimanager.html"><abbr title="src/APIManager.php">APIManager.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">861</span>
+    <span class="phpdocumentor-element-found-in__line">874</span>
 
-            <a href="classes/APIManager-APIManager.html#source-view.861" class="phpdocumentor-element-found-in__source" data-line="861" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
+            <a href="classes/APIManager-APIManager.html#source-view.874" class="phpdocumentor-element-found-in__source" data-line="874" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
     </aside>
 
         <p class="phpdocumentor-summary">Securely requires_once a file.</p>
@@ -1692,9 +1704,9 @@ or if the file does not exist.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/APIManager.php"><a href="files/src-apimanager.html"><abbr title="src/APIManager.php">APIManager.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">831</span>
+    <span class="phpdocumentor-element-found-in__line">844</span>
 
-            <a href="classes/APIManager-APIManager.html#source-view.831" class="phpdocumentor-element-found-in__source" data-line="831" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
+            <a href="classes/APIManager-APIManager.html#source-view.844" class="phpdocumentor-element-found-in__source" data-line="844" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
     </aside>
 
         <p class="phpdocumentor-summary">Retrieves the response manager instance.</p>

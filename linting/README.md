@@ -40,6 +40,7 @@ You may want to add the `linting/` directory to your `.gitignore` when deploying
 - **[Rector](https://github.com/rectorphp/rector)**: A tool for automated code refactoring and upgrades to improve code quality, type safety, and security.
 - **[Composer](https://github.com/composer/composer)**: A dependency manager for PHP, used to manage project dependencies.
 - **[Nodemon](https://github.com/remy/nodemon)**: A tool that monitors changes in your source files and automatically restarts applications. In this project, it's used to watch for PHP file changes and run PHPStan.
+- **[phpDocumentor](https://github.com/phpdocumentor/phpdocumentor)**: A tool for automatically generating PHP documentation.
 
 ## Setting Up the Project ⚙️
 
@@ -107,6 +108,13 @@ The linting functions of this project are intended to be run on a Windows machin
      ```bash
      composer rector
      ```
+
+7. **Run phpDocumentor**
+   - To run phpDocumentor, run
+
+   ```
+   php phpDocumentor.phar run -d ../src -t ../docs --config ../phpdoc.dist.xml
+   ```
 
 ## Summary 🎯
 
