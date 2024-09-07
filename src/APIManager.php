@@ -967,11 +967,11 @@ declare(strict_types=1);
             ];
 
             // Check if the request is from a trusted proxy
-            if (!empty($_SERVER['REMOTE_ADDR']) && (empty($trustedProxies) || in_array($_SERVER['REMOTE_ADDR'], $trustedProxies, true))) {
-                foreach ($headersToCheck as $header) {
-                    if (!empty($_SERVER[$header])) {
-                        $ip = $this->extractValidIp($_SERVER[$header]);
-                        if ($ip) {
+            if (!empty($_SERVER['REMOTE_ADDR']) && ($trustedProxies === [] || in_array($_SERVER['REMOTE_ADDR'], $trustedProxies, true))) {
+                foreach ($headersToCheck as $headerToCheck) {
+                    if (!empty($_SERVER[$headerToCheck])) {
+                        $ip = $this->extractValidIp($_SERVER[$headerToCheck]);
+                        if ($ip !== null && $ip !== '' && $ip !== '0') {
                             return $ip;
                         }
                     }
@@ -993,7 +993,7 @@ declare(strict_types=1);
          */
         private function extractValidIp(?string $headerValue): ?string
         {
-            if (!$headerValue) {
+            if ($headerValue === null || $headerValue === '' || $headerValue === '0') {
                 return null;
             }
 
