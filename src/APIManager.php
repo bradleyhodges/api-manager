@@ -600,7 +600,7 @@ declare(strict_types=1);
          *     // Handle empty input
          * }
          */
-        public function sanitizeInput(mixed $input, ?int $maxLength = null): string
+        public function sanitizeInput(mixed $input, ?int $maxLength = null): string|null
         {
             // Check if the input is already a string
             if (is_string($input)) {
@@ -671,7 +671,7 @@ declare(strict_types=1);
          * 
          * @param bool $handleResponse Determines whether to call handleContinuance() after adding errors.
          * 
-         * @return array The sanitized and validated parameters.
+         * @return array|b The sanitized and validated parameters.
          *
          * @example
          * $validatedParams = $this->expectParameters('POST', [
@@ -762,6 +762,12 @@ declare(strict_types=1);
                 $sanitize = $parameter['sanitize'] ?? true;
                 $descriptor = $parameter['descriptor'] ?? $name;
                 $maxLength = $parameter['maxLength'] ?? null;
+                $options = $parameter['options'] ?? [];
+
+                // Check for an empty regex pattern option and set default to any value (no validation, always passes)
+                if ($format === FILTER_VALIDATE_REGEXP && empty($options['regexp'])) {
+                    $options['regexp'] = '/.*/';
+                }
 
                 // Create a dynamic JSON Pointer for the error source
                 $pointer = '/data/attributes/' . $name;
@@ -798,7 +804,7 @@ declare(strict_types=1);
                             ];
                             continue;
                         }
-                    } elseif (is_int($format) && !filter_var($value, $format, $parameter['options'] ?? [])) {
+                    } elseif (is_int($format) && !filter_var($value, $format, ['options' => $options])) {
                         if ($strictFormat) {
                             $errors[] = [
                                 'status' => '422',  // Unprocessable Entity
