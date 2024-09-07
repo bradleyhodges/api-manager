@@ -601,7 +601,7 @@ declare(strict_types=1);
             if (!is_string($input)) {
                 try {
                     $input = strval($input);
-                } catch (\Exception $exception) {
+                } catch (Exception $exception) {
                     // If conversion fails, return an empty string
                     return '';
                 }
@@ -632,7 +632,7 @@ declare(strict_types=1);
 
             // Validate maxLength if provided
             if ($maxLength !== null) {
-                if (!is_int($maxLength) || $maxLength <= 0) {
+                if ($maxLength <= 0) {
                     throw new InvalidArgumentException('maxLength must be a positive integer if provided.');
                 }
 
