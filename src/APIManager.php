@@ -582,7 +582,7 @@ declare(strict_types=1);
          * This method ensures that input data is safe for processing by trimming whitespace,
          * removing invalid UTF-8 characters, and truncating the string if necessary.
          *
-         * @param mixed $data The data to sanitize and process.
+         * @param mixed $input The data to sanitize and process. Can be any type that can be cast to a string.
          * @param int|null $maxLength Optional maximum length for truncation. Must be a positive integer if provided.
          *
          * @return string|null Returns the sanitized and processed string, or null if the string is empty after sanitization.
@@ -594,62 +594,58 @@ declare(strict_types=1);
          * @example
          * // Sanitize input with a maximum length of 100 characters
          * $sanitized = $apiManager->sanitizeInput($userInput, 100);
-         *
-         * // Handle the case where the input was empty after sanitization
-         * if ($sanitized === null) {
-         *     // Handle empty input
-         * }
          */
-        public function sanitizeInput(mixed $input, ?int $maxLength = null): string|null
+        public function sanitizeInput(mixed $input, ?int $maxLength = null): ?string
         {
-            // Check if the input is already a string
-            if (is_string($input)) {
-                return htmlspecialchars($input, ENT_QUOTES, 'UTF-8');
-            }
-    
-            // Try to convert to string
-            try {
-                $convertedString = strval($input);
-            } catch (Exception $exception) {
-                // If conversion fails, return an empty string
-                return '';
+            // Convert the input to a string
+            if (!is_string($input)) {
+                try {
+                    $input = strval($input);
+                } catch (\Exception $exception) {
+                    // If conversion fails, return an empty string
+                    return '';
+                }
             }
 
-            // Validate maxLength if provided
-            if ($maxLength !== null && (!is_int($maxLength) || $maxLength <= 0)) {
-                throw new InvalidArgumentException('maxLength must be a positive integer if provided.');
-            }
+            // Trim whitespace and sanitize the input
+            $input = trim($input);
+            $input = htmlspecialchars($input, ENT_QUOTES, 'UTF-8');
 
-            // Check if mbstring extension is available if multi-byte safe truncation is needed
-            if ($maxLength !== null && !function_exists('mb_substr')) {
-                throw new RuntimeException('The mbstring extension is required for safe truncation but is not enabled.');
-            }
-
-            // Sanitize and trim the input data
-            $data = trim($data ?? ''); // Null coalescing operator to ensure $data is a string
-
-            // Return null if the sanitized string is empty
-            if ($data === '') {
+            // If the input is empty after trimming, return null
+            if ($input === '') {
                 return null;
             }
 
             // Validate that the string is valid UTF-8
-            if (!mb_check_encoding($data, 'UTF-8')) {
+            if (!mb_check_encoding($input, 'UTF-8')) {
                 throw new InvalidArgumentException('Invalid UTF-8 encoding detected.');
             }
 
             // Set a maximum allowed length to prevent excessively large inputs
             $maxAllowedLength = 10000; // Define a reasonable maximum input length
-            if (strlen($data) > $maxAllowedLength) {
-                throw new InvalidArgumentException(sprintf('Input data exceeds the maximum allowed length of %d characters.', $maxAllowedLength));
+            if (strlen($input) > $maxAllowedLength) {
+                throw new InvalidArgumentException(sprintf(
+                    'Input data exceeds the maximum allowed length of %d characters.',
+                    $maxAllowedLength
+                ));
             }
 
-            // If maxLength is specified, truncate the string safely using mb_substr
+            // Validate maxLength if provided
             if ($maxLength !== null) {
-                return mb_substr($data, 0, $maxLength);
+                if (!is_int($maxLength) || $maxLength <= 0) {
+                    throw new InvalidArgumentException('maxLength must be a positive integer if provided.');
+                }
+
+                // Check if the mbstring extension is available for safe truncation
+                if (!function_exists('mb_substr')) {
+                    throw new RuntimeException('The mbstring extension is required for safe truncation but is not enabled.');
+                }
+
+                // If maxLength is specified, truncate the string safely using mb_substr
+                $input = mb_substr($input, 0, $maxLength);
             }
 
-            return $data;
+            return $input;
         }
 
         /**
