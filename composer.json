@@ -37,11 +37,5 @@
     "require-dev": {
         "phpunit/phpunit": "^9.5"
     },
-    "authors": [
-        {
-            "name": "Bradley Hodges",
-            "email": "bradley.hodges@outlook.com"
-        }
-    ],
     "minimum-stability": "stable"
 }
