@@ -943,6 +943,74 @@ declare(strict_types=1);
            }
        }
 
+       /**
+         * Securely retrieve the client's IP address.
+         *
+         * This method checks multiple headers that may contain the client IP, but validates
+         * them to ensure they are not spoofed. The method is hardened to avoid common pitfalls 
+         * such as trusting unvalidated headers and supports environments behind proxies.
+         *
+         * @return string|null The validated client IP address or null if it cannot be determined.
+         */
+        public function getClientIp(): ?string
+        {
+            // Define trusted proxies if needed. This could be configurable based on the deployment.
+            // E.g., $trustedProxies = ['192.168.1.1', '10.0.0.1'];
+            $trustedProxies = [];
+
+            // Priority order of headers to check for client IP, ordered by reliability
+            $headersToCheck = [
+                'HTTP_X_FORWARDED_FOR', // Standard header for proxies
+                'HTTP_CLIENT_IP',       // Less commonly used but should be checked
+                'HTTP_X_REAL_IP',       // Another potential header set by proxies
+                'HTTP_CF_CONNECTING_IP' // Cloudflare specific header
+            ];
+
+            // Check if the request is from a trusted proxy
+            if (!empty($_SERVER['REMOTE_ADDR']) && (empty($trustedProxies) || in_array($_SERVER['REMOTE_ADDR'], $trustedProxies, true))) {
+                foreach ($headersToCheck as $header) {
+                    if (!empty($_SERVER[$header])) {
+                        $ip = $this->extractValidIp($_SERVER[$header]);
+                        if ($ip) {
+                            return $ip;
+                        }
+                    }
+                }
+            }
+
+            // Fallback to REMOTE_ADDR as the final option
+            return $this->extractValidIp($_SERVER['REMOTE_ADDR'] ?? null);
+        }
+
+        /**
+         * Extract a valid IP address from a header value.
+         *
+         * This method handles cases where headers may contain multiple IPs (comma-separated)
+         * and performs basic validation to ensure the IP is valid and not a private/internal IP.
+         *
+         * @param string|null $headerValue The header value to extract IPs from.
+         * @return string|null The valid IP address, or null if none found.
+         */
+        private function extractValidIp(?string $headerValue): ?string
+        {
+            if (!$headerValue) {
+                return null;
+            }
+
+            // In case of multiple IP addresses in the header, take the first one
+            $ips = explode(',', $headerValue);
+            foreach ($ips as $ip) {
+                $ip = trim($ip); // Remove any whitespace
+
+                // Validate IP
+                if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                    return $ip;
+                }
+            }
+
+            return null;
+        }
+
         /**
          * Retrieves the initialized CSRF token manager.
          * 
