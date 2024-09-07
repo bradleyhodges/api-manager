@@ -656,10 +656,23 @@ declare(strict_types=1);
          * Validates and sanitizes the expected parameters from a given source (e.g., JSON, XML, POST, GET, REQUEST).
          *
          * @param string $uses The source of the parameters (e.g., JSON, XML, POST, GET, REQUEST).
-         * @param array $parameters The array of parameter rules to validate and sanitize.
-         * @param bool $handleResponse Determines whether to call handleContinuance() after adding errors.
-         * @return array The sanitized and validated parameters.
+         * @param array[] $parameters The array of parameter rules to validate and sanitize.
          * 
+         * Each parameter rule array should contain the following keys:
+         * - 'mandatory' (bool): Whether the parameter is required (default: true).
+         * - 'requires' (string): The key in the input data to validate.
+         * - 'name' (string): The name of the parameter (default: value of 'requires').
+         * - 'format' (int|string|null): The validation format (FILTER_VALIDATE constant or regex string, optional).
+         * - 'strictFormat' (bool): Whether to strictly enforce the format (default: true).
+         * - 'sanitize' (bool): Whether to sanitize the input (default: true).
+         * - 'descriptor' (string): A human-readable name for the parameter (default: value of 'name').
+         * - 'maxLength' (int|null): The maximum length allowed for the input (optional).
+         * - 'options' (array): Additional options for filters (e.g., ['regexp' => 'regex pattern'], default: empty array).
+         * 
+         * @param bool $handleResponse Determines whether to call handleContinuance() after adding errors.
+         * 
+         * @return array The sanitized and validated parameters.
+         *
          * @example
          * $validatedParams = $this->expectParameters('POST', [
          *     [
