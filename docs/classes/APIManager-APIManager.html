@@ -202,6 +202,13 @@ secure framework for API-driven applications.</p>
 <dd>Validates and sanitizes the expected parameters from a given source (e.g., JSON, XML, POST, GET, REQUEST).</dd>
 
             <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/APIManager-APIManager.html#method_getClientIp">getClientIp()</a>
+    <span>
+                                &nbsp;: string|null    </span>
+</dt>
+<dd>Securely retrieve the client&#039;s IP address.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
     <a class="" href="classes/APIManager-APIManager.html#method_getCsrfTokenManager">getCsrfTokenManager()</a>
     <span>
                                 &nbsp;: <abbr title="\Symfony\Component\Security\Csrf\CsrfTokenManager">CsrfTokenManager</abbr>|null    </span>
@@ -541,9 +548,9 @@ secure framework for API-driven applications.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/APIManager.php"><a href="files/src-apimanager.html"><abbr title="src/APIManager.php">APIManager.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">999</span>
+    <span class="phpdocumentor-element-found-in__line">1067</span>
 
-            <a href="classes/APIManager-APIManager.html#source-view.999" class="phpdocumentor-element-found-in__source" data-line="999" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
+            <a href="classes/APIManager-APIManager.html#source-view.1067" class="phpdocumentor-element-found-in__source" data-line="1067" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
     </aside>
 
         <p class="phpdocumentor-summary">Decodes a JSON string into a PHP array with error handling.</p>
@@ -616,9 +623,9 @@ secure framework for API-driven applications.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/APIManager.php"><a href="files/src-apimanager.html"><abbr title="src/APIManager.php">APIManager.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1022</span>
+    <span class="phpdocumentor-element-found-in__line">1090</span>
 
-            <a href="classes/APIManager-APIManager.html#source-view.1022" class="phpdocumentor-element-found-in__source" data-line="1022" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
+            <a href="classes/APIManager-APIManager.html#source-view.1090" class="phpdocumentor-element-found-in__source" data-line="1090" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
     </aside>
 
         <p class="phpdocumentor-summary">Encodes a PHP array into a JSON string with error handling.</p>
@@ -858,6 +865,54 @@ secure framework for API-driven applications.</p>
             -public
                                                         "
 >
+    <h4 class="phpdocumentor-element__name" id="method_getClientIp">
+        getClientIp()
+        <a href="classes/APIManager-APIManager.html#method_getClientIp" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/APIManager.php"><a href="files/src-apimanager.html"><abbr title="src/APIManager.php">APIManager.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">955</span>
+
+            <a href="classes/APIManager-APIManager.html#source-view.955" class="phpdocumentor-element-found-in__source" data-line="955" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
+    </aside>
+
+        <p class="phpdocumentor-summary">Securely retrieve the client&#039;s IP address.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">getClientIp</span><span>(</span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">string|null</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>This method checks multiple headers that may contain the client IP, but validates
+them to ensure they are not spoofed. The method is hardened to avoid common pitfalls
+such as trusting unvalidated headers and supports environments behind proxies.</p>
+</section>
+
+    
+    
+
+    
+
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">string|null</span>
+                    &mdash;
+                <section class="phpdocumentor-description"><p>The validated client IP address or null if it cannot be determined.</p>
+</section>
+
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
     <h4 class="phpdocumentor-element__name" id="method_getCsrfTokenManager">
         getCsrfTokenManager()
         <a href="classes/APIManager-APIManager.html#method_getCsrfTokenManager" class="headerlink"><i class="fas fa-link"></i></a>
@@ -866,9 +921,9 @@ secure framework for API-driven applications.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/APIManager.php"><a href="files/src-apimanager.html"><abbr title="src/APIManager.php">APIManager.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">953</span>
+    <span class="phpdocumentor-element-found-in__line">1021</span>
 
-            <a href="classes/APIManager-APIManager.html#source-view.953" class="phpdocumentor-element-found-in__source" data-line="953" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
+            <a href="classes/APIManager-APIManager.html#source-view.1021" class="phpdocumentor-element-found-in__source" data-line="1021" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
     </aside>
 
         <p class="phpdocumentor-summary">Retrieves the initialized CSRF token manager.</p>
@@ -912,9 +967,9 @@ secure framework for API-driven applications.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/APIManager.php"><a href="files/src-apimanager.html"><abbr title="src/APIManager.php">APIManager.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1077</span>
+    <span class="phpdocumentor-element-found-in__line">1145</span>
 
-            <a href="classes/APIManager-APIManager.html#source-view.1077" class="phpdocumentor-element-found-in__source" data-line="1077" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
+            <a href="classes/APIManager-APIManager.html#source-view.1145" class="phpdocumentor-element-found-in__source" data-line="1145" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
     </aside>
 
         <p class="phpdocumentor-summary">Retrieves JSON payload from the request body and decodes it into a PHP array.</p>
@@ -1097,9 +1152,9 @@ secure framework for API-driven applications.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/APIManager.php"><a href="files/src-apimanager.html"><abbr title="src/APIManager.php">APIManager.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1053</span>
+    <span class="phpdocumentor-element-found-in__line">1121</span>
 
-            <a href="classes/APIManager-APIManager.html#source-view.1053" class="phpdocumentor-element-found-in__source" data-line="1053" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
+            <a href="classes/APIManager-APIManager.html#source-view.1121" class="phpdocumentor-element-found-in__source" data-line="1121" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
     </aside>
 
         <p class="phpdocumentor-summary">Retrieves sanitized input from the $_GET superglobal.</p>
@@ -1153,9 +1208,9 @@ secure framework for API-driven applications.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/APIManager.php"><a href="files/src-apimanager.html"><abbr title="src/APIManager.php">APIManager.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1064</span>
+    <span class="phpdocumentor-element-found-in__line">1132</span>
 
-            <a href="classes/APIManager-APIManager.html#source-view.1064" class="phpdocumentor-element-found-in__source" data-line="1064" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
+            <a href="classes/APIManager-APIManager.html#source-view.1132" class="phpdocumentor-element-found-in__source" data-line="1132" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
     </aside>
 
         <p class="phpdocumentor-summary">Retrieves sanitized input from the $_POST superglobal.</p>
@@ -1394,9 +1449,9 @@ with a JSON error message.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/APIManager.php"><a href="files/src-apimanager.html"><abbr title="src/APIManager.php">APIManager.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1038</span>
+    <span class="phpdocumentor-element-found-in__line">1106</span>
 
-            <a href="classes/APIManager-APIManager.html#source-view.1038" class="phpdocumentor-element-found-in__source" data-line="1038" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
+            <a href="classes/APIManager-APIManager.html#source-view.1106" class="phpdocumentor-element-found-in__source" data-line="1106" data-modal="source-view" data-src="files/src/APIManager.php.txt"></a>
     </aside>
 
         <p class="phpdocumentor-summary">Checks if a given string is a valid JSON.</p>
@@ -2379,6 +2434,7 @@ It ensures that critical security policies, such as Content Security Policy (CSP
                                             <li class=""><a href="classes/APIManager-APIManager.html#method_encodeJson">encodeJson()</a></li>
                                             <li class=""><a href="classes/APIManager-APIManager.html#method_errorLog">errorLog()</a></li>
                                             <li class=""><a href="classes/APIManager-APIManager.html#method_expectParameters">expectParameters()</a></li>
+                                            <li class=""><a href="classes/APIManager-APIManager.html#method_getClientIp">getClientIp()</a></li>
                                             <li class=""><a href="classes/APIManager-APIManager.html#method_getCsrfTokenManager">getCsrfTokenManager()</a></li>
                                             <li class=""><a href="classes/APIManager-APIManager.html#method_getJSONPayload">getJSONPayload()</a></li>
                                             <li class=""><a href="classes/APIManager-APIManager.html#method_getRateLimitRemainingAttempts">getRateLimitRemainingAttempts()</a></li>

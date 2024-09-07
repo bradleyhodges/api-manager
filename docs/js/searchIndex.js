@@ -121,6 +121,11 @@ Search.appendIndex(
             "summary": "Securely\u0020requires_once\u0020a\u0020file.",
             "url": "classes/APIManager-APIManager.html#method_requireOnceFile"
         },                {
+            "fqsen": "\\APIManager\\APIManager\u003A\u003AgetClientIp\u0028\u0029",
+            "name": "getClientIp",
+            "summary": "Securely\u0020retrieve\u0020the\u0020client\u0027s\u0020IP\u0020address.",
+            "url": "classes/APIManager-APIManager.html#method_getClientIp"
+        },                {
             "fqsen": "\\APIManager\\APIManager\u003A\u003AgetCsrfTokenManager\u0028\u0029",
             "name": "getCsrfTokenManager",
             "summary": "Retrieves\u0020the\u0020initialized\u0020CSRF\u0020token\u0020manager.",
